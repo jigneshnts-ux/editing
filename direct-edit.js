@@ -3,37 +3,43 @@ const headlineSlider=document.getElementById('headlineY');
 const captionSlider=document.getElementById('captionY');
 let activeText=null;
 
-function canvasY(event){
+function getCanvasY(event){
   const rect=canvas.getBoundingClientRect();
   const pointer=event.touches?event.touches[0]:event;
   return (pointer.clientY-rect.top)*(canvas.height/rect.height);
 }
 
-function selectText(y){
-  const headlineCanvasY=canvas.height*(Number(headlineSlider.value)/100);
-  const captionCanvasY=canvas.height*(Number(captionSlider.value)/100);
-  if(Math.abs(y-headlineCanvasY)<canvas.height*0.1)return 'headline';
-  if(Math.abs(y-captionCanvasY)<canvas.height*0.1)return 'caption';
-  return null;
+function nearestText(y){
+  const headlineY=canvas.height*(Number(headlineSlider.value)/100);
+  const captionY=canvas.height*(Number(captionSlider.value)/100);
+  const headlineDistance=Math.abs(y-headlineY);
+  const captionDistance=Math.abs(y-captionY);
+  return headlineDistance<captionDistance?'headline':'caption';
 }
 
-function updateTextPosition(y){
+function updatePosition(y){
   const percent=Math.round((y/canvas.height)*1000)/10;
-  if(activeText==='headline')headlineSlider.value=Math.max(3,Math.min(45,percent));
-  if(activeText==='caption')captionSlider.value=Math.max(55,Math.min(97,percent));
-  headlineSlider.dispatchEvent(new Event('input',{bubbles:true}));
-  captionSlider.dispatchEvent(new Event('input',{bubbles:true}));
+  if(activeText==='headline'){
+    headlineSlider.value=Math.max(3,Math.min(45,percent));
+    headlineSlider.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  if(activeText==='caption'){
+    captionSlider.value=Math.max(55,Math.min(97,percent));
+    captionSlider.dispatchEvent(new Event('input',{bubbles:true}));
+  }
 }
 
 function startDrag(event){
   if(!canvas||!headlineSlider||!captionSlider)return;
-  activeText=selectText(canvasY(event));
-  if(activeText){canvas.style.cursor='grabbing';event.preventDefault();}
+  activeText=nearestText(getCanvasY(event));
+  canvas.style.cursor='grabbing';
+  updatePosition(getCanvasY(event));
+  event.preventDefault();
 }
 
 function moveDrag(event){
   if(!activeText)return;
-  updateTextPosition(canvasY(event));
+  updatePosition(getCanvasY(event));
   event.preventDefault();
 }
 
