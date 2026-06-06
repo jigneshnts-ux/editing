@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EditPro Studio | Image & Video Editor</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <nav class="navbar">
+      <a class="logo" href="#home">EditPro<span>Studio</span></a>
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">☰</button>
+      <div class="nav-links" id="navLinks">
+        <a href="#features">Features</a>
+        <a href="#image-editor">Image Editor</a>
+        <a href="#video-editor">Video Editor</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#start" class="nav-cta">Start Editing</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div class="hero-content">
+        <p class="eyebrow">AI-ready creative editing website</p>
+        <h1>Edit images and videos for Instagram, YouTube, ads, and news posts.</h1>
+        <p class="hero-text">A fast web editor concept with image tools, video tools, templates, export options, and a creator-focused workflow.</p>
+        <div class="hero-actions">
+          <a href="#start" class="btn primary">Launch Editor</a>
+          <a href="#features" class="btn secondary">View Features</a>
+        </div>
+      </div>
+
+      <div class="editor-preview" aria-label="Editor preview">
+        <div class="preview-topbar"><span></span><span></span><span></span></div>
+        <div class="preview-body">
+          <aside class="tool-panel">
+            <button>Crop</button><button>Text</button><button>Filter</button><button>Trim</button>
+          </aside>
+          <div class="canvas-preview">
+            <div class="canvas-card">
+              <span>9:16 Reel</span>
+              <h3>Breaking Story</h3>
+              <p>Text, filters, subtitles, logo and export tools.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="section-heading">
+        <p class="eyebrow">Core features</p>
+        <h2>Everything needed for a strong first version</h2>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card"><h3>Image Editing</h3><p>Crop, resize, rotate, filters, brightness, contrast, saturation, text overlays, stickers and export.</p></article>
+        <article class="feature-card"><h3>Video Editing</h3><p>Trim clips, resize to social ratios, add text, subtitles, music, watermark and export-ready layouts.</p></article>
+        <article class="feature-card"><h3>Templates</h3><p>Instagram post, reel cover, YouTube thumbnail, short video, product ad and Hindi news poster templates.</p></article>
+        <article class="feature-card"><h3>Project Dashboard</h3><p>Save projects locally first, then upgrade later with Firebase login, cloud storage and billing.</p></article>
+      </div>
+    </section>
+
+    <section class="split-section" id="image-editor">
+      <div>
+        <p class="eyebrow">Image editor</p>
+        <h2>Quick image tools for creators</h2>
+        <ul class="check-list">
+          <li>Upload JPG, PNG or WebP</li>
+          <li>Crop and resize for 1:1, 3:4, 9:16 and 16:9</li>
+          <li>Add bold Hindi/English text overlays</li>
+          <li>Apply creator-style filters and download</li>
+        </ul>
+      </div>
+      <div class="mock-card">
+        <div class="upload-box">Drop image here</div>
+        <div class="range-row"><span>Brightness</span><strong>72%</strong></div>
+        <div class="range-row"><span>Contrast</span><strong>64%</strong></div>
+        <button class="btn primary full">Export Image</button>
+      </div>
+    </section>
+
+    <section class="split-section reverse" id="video-editor">
+      <div class="mock-card timeline-card">
+        <div class="video-frame">Video Preview</div>
+        <div class="timeline"><span></span><span></span><span></span><span></span></div>
+        <button class="btn primary full">Export MP4</button>
+      </div>
+      <div>
+        <p class="eyebrow">Video editor</p>
+        <h2>Simple workflow for reels and shorts</h2>
+        <ul class="check-list">
+          <li>Upload MP4/WebM video</li>
+          <li>Trim start and end time</li>
+          <li>Add text, captions and watermark</li>
+          <li>Resize for Instagram Reels and YouTube Shorts</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section dark" id="start">
+      <div class="section-heading">
+        <p class="eyebrow">Starter editor</p>
+        <h2>Try the front-end upload demo</h2>
+        <p>This first version previews selected image or video files in the browser. Editing tools can be added module by module.</p>
+      </div>
+      <div class="starter-editor">
+        <div class="upload-panel">
+          <label for="fileInput">Upload image or video</label>
+          <input type="file" id="fileInput" accept="image/*,video/*" />
+          <div class="ratio-buttons">
+            <button data-ratio="1 / 1">1:1</button>
+            <button data-ratio="3 / 4">3:4</button>
+            <button data-ratio="9 / 16">9:16</button>
+            <button data-ratio="16 / 9">16:9</button>
+          </div>
+        </div>
+        <div class="preview-stage" id="previewStage"><p>Preview will appear here</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="pricing">
+      <div class="section-heading"><p class="eyebrow">Business model</p><h2>Simple monetization plan</h2></div>
+      <div class="pricing-grid">
+        <article class="price-card"><h3>Free</h3><p class="price">₹0</p><p>Basic image editing, limited exports and watermark.</p></article>
+        <article class="price-card popular"><h3>Creator</h3><p class="price">₹299/mo</p><p>No watermark, HD exports, premium templates and project saving.</p></article>
+        <article class="price-card"><h3>Studio</h3><p class="price">₹999/mo</p><p>Team access, AI tools, brand kit, cloud storage and priority exports.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><p>© 2026 EditPro Studio. Built for image and video creators.</p></footer>
+  <script src="script.js"></script>
+</body>
+</html>
