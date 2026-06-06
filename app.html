@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EditPro Studio App</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="index.html" class="brand">EditPro<span>Studio</span></a>
+    <div class="top-actions">
+      <label for="fileInput" class="btn upload">Upload Image</label>
+      <input id="fileInput" type="file" accept="image/*" hidden>
+      <button id="downloadBtn" class="btn primary">Download PNG</button>
+    </div>
+  </header>
+
+  <main class="app-layout">
+    <aside class="panel left-panel">
+      <h2>Templates</h2>
+      <button class="template active" data-template="news">News Poster</button>
+      <button class="template" data-template="reel">Reel Cover</button>
+      <button class="template" data-template="product">Product Ad</button>
+      <button class="template" data-template="clean">Clean</button>
+
+      <h2>Size</h2>
+      <div class="grid-2">
+        <button class="ratio" data-ratio="1:1">1:1</button>
+        <button class="ratio" data-ratio="3:4">3:4</button>
+        <button class="ratio active" data-ratio="9:16">9:16</button>
+        <button class="ratio" data-ratio="16:9">16:9</button>
+      </div>
+
+      <h2>Project</h2>
+      <button id="saveBtn" class="wide">Save Settings</button>
+      <button id="loadBtn" class="wide">Load Settings</button>
+      <button id="resetBtn" class="wide danger">Reset</button>
+    </aside>
+
+    <section class="canvas-wrap">
+      <div class="canvas-card">
+        <canvas id="editorCanvas" width="1080" height="1920"></canvas>
+        <div id="emptyState" class="empty">Upload an image to start</div>
+      </div>
+      <p class="hint">Tip: edit text and sliders from right panel. Export gives high-resolution PNG.</p>
+    </section>
+
+    <aside class="panel right-panel">
+      <h2>Text</h2>
+      <label>Headline<input id="headline" type="text" value="Breaking News"></label>
+      <label>Caption<input id="caption" type="text" value="Full story in caption"></label>
+      <label>Headline Position<input id="headlineY" type="range" min="3" max="45" value="8"></label>
+      <label>Caption Position<input id="captionY" type="range" min="55" max="97" value="90"></label>
+
+      <h2>Image Adjust</h2>
+      <label>Brightness<input id="brightness" type="range" min="50" max="150" value="100"></label>
+      <label>Contrast<input id="contrast" type="range" min="50" max="170" value="105"></label>
+      <label>Saturation<input id="saturation" type="range" min="0" max="200" value="105"></label>
+      <label>Dark Overlay<input id="overlay" type="range" min="0" max="95" value="75"></label>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
