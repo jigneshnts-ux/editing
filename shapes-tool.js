@@ -1,0 +1,21 @@
+window.EditForgeShapes={
+  shapes:[],
+  selected:null,
+  add(type='rect',options={}){
+    const shape={
+      id:'shape-'+Date.now(),
+      type,
+      x:options.x||120,
+      y:options.y||120,
+      width:options.width||220,
+      height:options.height||120,
+      fill:options.fill||'#7c3aed',
+      stroke:options.stroke||'#ffffff',
+      strokeWidth:options.strokeWidth||4,
+      opacity:options.opacity??1,
+      visible:true,
+      locked:false
+    };
+    this.shapes.push(shape);
+    this.selected=shape.id;
+    this.render
