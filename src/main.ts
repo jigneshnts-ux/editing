@@ -1,3 +1,4 @@
+import './styles/globals.css';
 import { App } from './App';
 
 const mount = document.getElementById('root');
