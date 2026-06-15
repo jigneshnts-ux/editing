@@ -10,9 +10,5 @@ export const featureRegistry: Feature[] = [
     mode: 'both',
     keywords: ['dashboard', 'tasks', 'templates'],
     uiLocation: 'dashboard'
-  },
-  {
-    id: 'specific-area-editing',
-    name: 'Specific Area Editing',
-    category: 'Area Editing',
-    description: 'Select part
+  }
+];
