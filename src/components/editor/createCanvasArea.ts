@@ -14,6 +14,7 @@ export function createCanvasArea(): HTMLElement {
     layer.textContent = name;
     stage.append(layer);
     window.dispatchEvent(new CustomEvent('creatorx-layer-added', { detail: name }));
+    window.dispatchEvent(new CustomEvent('creatorx-layer-selected', { detail: name }));
   });
   el.append(hint, stage);
   return el;
