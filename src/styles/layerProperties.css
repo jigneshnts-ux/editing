@@ -23,9 +23,32 @@
   border-top: 1px solid gray;
 }
 
+.area-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
 .area-box {
   border: 2px dashed white;
   border-radius: 10px;
   padding: 12px;
   margin: 8px;
+}
+
+.area-blur {
+  filter: blur(2px);
+}
+
+.area-erase {
+  opacity: 0.25;
+}
+
+.area-highlight {
+  background: yellow;
+  color: black;
+}
+
+.area-darken {
+  background: black;
 }
