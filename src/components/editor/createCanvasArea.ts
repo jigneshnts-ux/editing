@@ -10,12 +10,18 @@ export function createCanvasArea(): HTMLElement {
     window.dispatchEvent(new CustomEvent('creatorx-layer-selected', { detail: layer.dataset.layer || '' }));
   }
 
+  function resizeLayer(layer: HTMLElement, width = 120, height = 80): void {
+    layer.style.width = `${width}px`;
+    layer.style.height = `${height}px`;
+  }
+
   function addLayer(name = `Layer ${count + 1}`): void {
     count += 1;
     const layer = document.createElement('div');
     layer.className = 'canvas-layer';
     layer.dataset.layer = name;
     layer.textContent = name;
+    resizeLayer(layer);
     stage.append(layer);
     window.dispatchEvent(new CustomEvent('creatorx-layer-added', { detail: name }));
     selectLayer(layer);
@@ -51,6 +57,18 @@ export function createCanvasArea(): HTMLElement {
     stage.replaceChildren();
     count = 0;
     window.dispatchEvent(new CustomEvent('creatorx-layers-cleared'));
+  });
+
+  window.addEventListener('creatorx-layer-update', (event) => {
+    const detail = (event as CustomEvent<{ id: string; name: string; width: number; height: number }>).detail;
+    const layer = [...stage.querySelectorAll<HTMLElement>('.canvas-layer')].find((item) => item.dataset.layer === detail.id);
+    if (!layer) return;
+    const oldName = layer.dataset.layer || detail.id;
+    layer.dataset.layer = detail.name;
+    layer.textContent = detail.name;
+    resizeLayer(layer, detail.width, detail.height);
+    selectLayer(layer);
+    window.dispatchEvent(new CustomEvent('creatorx-layer-updated', { detail: { oldName, name: detail.name } }));
   });
 
   el.append(hint, stage);
