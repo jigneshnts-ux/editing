@@ -16,4 +16,6 @@ export const dashboardTasks: DashboardTask[] = [
     id: 'reel-scene',
     title: 'Reel Scene',
     description: 'Plan vertical story scenes for Instagram Reels.',
-    category
+    category: 'Video'
+  }
+];
