@@ -13,5 +13,15 @@ export function createLeftToolbar(): HTMLElement {
     createToolButton('Asset', 'asset'),
     createToolButton('Export', 'export')
   );
+  const first = el.querySelector('button');
+  first?.classList.add('is-active');
+  el.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+    const button = target.closest('button');
+    if (!button) return;
+    el.querySelectorAll('button').forEach((item) => item.classList.remove('is-active'));
+    button.classList.add('is-active');
+    window.dispatchEvent(new CustomEvent('creatorx-tool-change', { detail: button.dataset.tool }));
+  });
   return el;
 }
