@@ -1,14 +1,14 @@
 :root {
   color-scheme: dark;
-  background: #080b12;
-  color: #f8fafc;
+  background: black;
+  color: white;
   font-family: Inter, Arial, sans-serif;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: #080b12;
+  background: black;
 }
 
 .cx {
@@ -23,6 +23,11 @@ body {
 }
 
 .cx p {
-  color: #94a3b8;
+  color: lightgray;
   font-size: 18px;
 }
+
+.cx button {
+  display: block;
+  margin-top: 14px;
+  padding: 12px
