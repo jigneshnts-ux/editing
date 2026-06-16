@@ -8,6 +8,5 @@ export function App(): HTMLElement {
   const subtitle = document.createElement('p');
   subtitle.textContent = 'Create news posts, reels, thumbnails, and scene-based content from one workspace.';
 
-  root.append(title, subtitle);
-  return root;
-}
+  const button = document.createElement('button');
+  button.textContent = 'Start News Poster';
