@@ -1,4 +1,5 @@
 import { createLayerPropertyPanel } from './createLayerPropertyPanel';
+import { createAreaPanel } from './createAreaPanel';
 
 export function createRightPanel(): HTMLElement {
   const el = document.createElement('aside');
@@ -12,6 +13,7 @@ export function createRightPanel(): HTMLElement {
   const remove = document.createElement('button');
   const clear = document.createElement('button');
   const properties = createLayerPropertyPanel();
+  const area = createAreaPanel();
   let names: string[] = [];
   let selectedName = '';
 
@@ -86,6 +88,6 @@ export function createRightPanel(): HTMLElement {
 
   actions.append(duplicate, remove, clear);
   render();
-  el.append(title, status, layers, selected, list, properties, actions);
+  el.append(title, status, layers, selected, list, properties, area, actions);
   return el;
 }
