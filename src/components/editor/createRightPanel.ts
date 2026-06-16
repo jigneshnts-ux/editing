@@ -4,25 +4,78 @@ export function createRightPanel(): HTMLElement {
   const status = document.createElement('p');
   const layers = document.createElement('p');
   const selected = document.createElement('p');
-  let count = 0;
+  const list = document.createElement('div');
+  const actions = document.createElement('div');
+  const duplicate = document.createElement('button');
+  const remove = document.createElement('button');
+  const clear = document.createElement('button');
+  let names: string[] = [];
+  let selectedName = '';
+
+  function render(): void {
+    layers.textContent = `Layers: ${names.length}`;
+    selected.textContent = selectedName ? `Selected layer: ${selectedName}` : 'Selected layer: none';
+    list.replaceChildren();
+    names.forEach((name) => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = name === selectedName ? 'layer-row is-active' : 'layer-row';
+      row.textContent = name;
+      row.addEventListener('click', () => window.dispatchEvent(new CustomEvent('creatorx-layer-selected', { detail: name })));
+      list.append(row);
+    });
+    duplicate.disabled = !selectedName;
+    remove.disabled = !selectedName;
+  }
+
   el.className = 'editor-right';
+  list.className = 'layer-list';
+  actions.className = 'layer-actions';
   title.textContent = 'Properties';
   status.textContent = 'Active tool: move';
-  layers.textContent = 'Layers: 0';
-  selected.textContent = 'Selected layer: none';
+  duplicate.textContent = 'Duplicate';
+  remove.textContent = 'Delete';
+  clear.textContent = 'Clear';
+  duplicate.type = 'button';
+  remove.type = 'button';
+  clear.type = 'button';
+
+  duplicate.addEventListener('click', () => window.dispatchEvent(new CustomEvent('creatorx-layer-duplicate', { detail: selectedName })));
+  remove.addEventListener('click', () => window.dispatchEvent(new CustomEvent('creatorx-layer-delete', { detail: selectedName })));
+  clear.addEventListener('click', () => window.dispatchEvent(new CustomEvent('creatorx-layers-clear')));
+
   window.addEventListener('creatorx-tool-change', (event) => {
     const tool = (event as CustomEvent<string>).detail;
     status.textContent = `Active tool: ${tool}`;
   });
+
   window.addEventListener('creatorx-layer-added', (event) => {
-    count += 1;
     const name = (event as CustomEvent<string>).detail;
-    layers.textContent = `Layers: ${count} | Latest: ${name}`;
+    if (!names.includes(name)) names = [...names, name];
+    selectedName = name;
+    render();
   });
+
   window.addEventListener('creatorx-layer-selected', (event) => {
-    const name = (event as CustomEvent<string>).detail;
-    selected.textContent = `Selected layer: ${name}`;
+    selectedName = (event as CustomEvent<string>).detail;
+    render();
   });
-  el.append(title, status, layers, selected);
+
+  window.addEventListener('creatorx-layer-removed', (event) => {
+    const name = (event as CustomEvent<string>).detail;
+    names = names.filter((item) => item !== name);
+    if (selectedName === name) selectedName = '';
+    render();
+  });
+
+  window.addEventListener('creatorx-layers-cleared', () => {
+    names = [];
+    selectedName = '';
+    render();
+  });
+
+  actions.append(duplicate, remove, clear);
+  render();
+  el.append(title, status, layers, selected, list, actions);
   return el;
 }
