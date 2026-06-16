@@ -1,4 +1,4 @@
-import { areaClearRequestEvent, areaClearedEvent, areaUpdatedEvent } from './areaEvents';
+import { areaActionRequestEvent, areaClearRequestEvent, areaClearedEvent, areaUpdatedEvent } from './areaEvents';
 
 export function createCanvasArea(): HTMLElement {
   const el = document.createElement('section');
@@ -26,6 +26,14 @@ export function createCanvasArea(): HTMLElement {
     areaBox.textContent = 'Selected area';
     stage.append(areaBox);
     window.dispatchEvent(new CustomEvent(areaUpdatedEvent, { detail: 'Area selected' }));
+  }
+
+  function applyAreaAction(action: string): void {
+    if (!areaBox) return;
+    areaBox.classList.remove('area-blur', 'area-erase', 'area-highlight', 'area-darken');
+    areaBox.classList.add(`area-${action}`);
+    areaBox.textContent = action === 'erase' ? 'Area erased' : `Area ${action}`;
+    window.dispatchEvent(new CustomEvent(areaUpdatedEvent, { detail: `Area action: ${action}` }));
   }
 
   function addLayer(name = `Layer ${count + 1}`): void {
@@ -61,6 +69,10 @@ export function createCanvasArea(): HTMLElement {
   window.addEventListener('creatorx-tool-change', (event) => {
     activeTool = (event as CustomEvent<string>).detail;
     hint.textContent = activeTool === 'select-area' ? 'Click canvas to create an editable area' : 'Click canvas to add a placeholder layer';
+  });
+
+  window.addEventListener(areaActionRequestEvent, (event) => {
+    applyAreaAction((event as CustomEvent<string>).detail);
   });
 
   window.addEventListener(areaClearRequestEvent, () => {
