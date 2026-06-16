@@ -1,1 +1,1 @@
-.editor-shell{margin-top:32px;border:1px solid gray;border-radius:16px;overflow:hidden}.editor-shell>*{padding:14px;border-bottom:1px solid gray}.editor-shell>*:last-child{border-bottom:0}
+.editor-shell{margin-top:32px;border:1px solid gray;border-radius:16px;overflow:hidden;display:grid;grid-template-columns:120px 1fr 180px}.editor-top{grid-column:1/4}.editor-left{grid-column:1}.editor-canvas{grid-column:2;min-height:220px}.editor-right{grid-column:3}.editor-scenes{grid-column:1/4}.editor-shell>*{padding:14px;border:1px solid gray}
