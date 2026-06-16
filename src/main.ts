@@ -1,5 +1,6 @@
 import './styles/globals.css';
 import './styles/dashboardButtons.css';
+import './styles/editorShell.css';
 import { App } from './App';
 
 const mount = document.getElementById('root');
