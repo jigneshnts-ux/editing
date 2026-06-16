@@ -5,6 +5,11 @@ import { createButton } from './components/dashboard/createButton';
 export function App(): HTMLElement {
   const root = document.createElement('main');
   root.className = 'cx';
-  root.append(createTitle(), createSubtitle(), createButton('Start News Poster'));
+  root.append(
+    createTitle(),
+    createSubtitle(),
+    createButton('Start News Poster'),
+    createButton('Create Reel Scene')
+  );
   return root;
 }
