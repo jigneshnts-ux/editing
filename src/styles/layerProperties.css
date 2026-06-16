@@ -1,0 +1,15 @@
+.layer-properties {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.layer-properties input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.layer-properties button {
+  text-align: left;
+}
