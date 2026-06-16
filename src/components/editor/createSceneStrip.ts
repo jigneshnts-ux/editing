@@ -9,6 +9,10 @@ export function createSceneStrip(): HTMLElement {
     const name = (event as CustomEvent<string>).detail;
     info.textContent = ` | Added ${name}`;
   });
+  window.addEventListener('creatorx-layer-selected', (event) => {
+    const name = (event as CustomEvent<string>).detail;
+    info.textContent = ` | Selected ${name}`;
+  });
   el.append(title, info);
   return el;
 }
