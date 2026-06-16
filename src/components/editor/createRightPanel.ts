@@ -1,3 +1,5 @@
+import { createLayerPropertyPanel } from './createLayerPropertyPanel';
+
 export function createRightPanel(): HTMLElement {
   const el = document.createElement('aside');
   const title = document.createElement('strong');
@@ -9,6 +11,7 @@ export function createRightPanel(): HTMLElement {
   const duplicate = document.createElement('button');
   const remove = document.createElement('button');
   const clear = document.createElement('button');
+  const properties = createLayerPropertyPanel();
   let names: string[] = [];
   let selectedName = '';
 
@@ -76,6 +79,6 @@ export function createRightPanel(): HTMLElement {
 
   actions.append(duplicate, remove, clear);
   render();
-  el.append(title, status, layers, selected, list, actions);
+  el.append(title, status, layers, selected, list, properties, actions);
   return el;
 }
