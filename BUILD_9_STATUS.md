@@ -1,17 +1,17 @@
 # Build 9 Status
 
-Status: in progress.
+Status: complete.
 
 Completed:
 - Area event constants
 - Area panel helper
-- Area box stylesheet
-
-Blocked:
-- Canvas integration full-file update was blocked by connector safety checks.
-- Right panel integration full-file update was blocked by connector safety checks.
+- Area panel attached to the right sidebar
+- Canvas Select Area mode behavior
+- Area box creation on canvas click
+- Clear Area request and clear event
+- Area box and area panel styling through imported CSS
 
 Next:
-- Retry smaller canvas integration.
-- Attach area panel to the right sidebar.
-- Import areaBox.css in main.ts.
+- Add drag-based area sizing
+- Add area action buttons such as blur, erase, and highlight
+- Connect selected area to future image editing tools
