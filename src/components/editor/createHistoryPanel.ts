@@ -1,4 +1,4 @@
-import { historyRecordedEvent } from './historyEvents';
+import { historyRecordedEvent, requestUndo } from './historyEvents';
 
 export function createHistoryPanel(): HTMLElement {
   const panel = document.createElement('section');
@@ -18,6 +18,12 @@ export function createHistoryPanel(): HTMLElement {
   window.addEventListener(historyRecordedEvent, () => {
     list.textContent = 'Action recorded';
     undo.disabled = false;
+  });
+
+  undo.addEventListener('click', () => {
+    requestUndo();
+    list.textContent = 'Undo requested';
+    undo.disabled = true;
   });
 
   panel.append(title, undo, list);
