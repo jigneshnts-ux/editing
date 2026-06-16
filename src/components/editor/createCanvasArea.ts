@@ -1,8 +1,12 @@
+import { areaClearRequestEvent, areaClearedEvent, areaUpdatedEvent } from './areaEvents';
+
 export function createCanvasArea(): HTMLElement {
   const el = document.createElement('section');
   const hint = document.createElement('p');
   const stage = document.createElement('div');
   let count = 0;
+  let activeTool = 'move';
+  let areaBox: HTMLElement | null = null;
 
   function selectLayer(layer: HTMLElement): void {
     stage.querySelectorAll('.canvas-layer').forEach((item) => item.classList.remove('is-selected'));
@@ -13,6 +17,15 @@ export function createCanvasArea(): HTMLElement {
   function resizeLayer(layer: HTMLElement, width = 120, height = 80): void {
     layer.style.width = `${width}px`;
     layer.style.height = `${height}px`;
+  }
+
+  function createArea(): void {
+    areaBox?.remove();
+    areaBox = document.createElement('div');
+    areaBox.className = 'area-box';
+    areaBox.textContent = 'Selected area';
+    stage.append(areaBox);
+    window.dispatchEvent(new CustomEvent(areaUpdatedEvent, { detail: 'Area selected' }));
   }
 
   function addLayer(name = `Layer ${count + 1}`): void {
@@ -38,7 +51,22 @@ export function createCanvasArea(): HTMLElement {
       selectLayer(existing);
       return;
     }
+    if (activeTool === 'select-area') {
+      createArea();
+      return;
+    }
     addLayer();
+  });
+
+  window.addEventListener('creatorx-tool-change', (event) => {
+    activeTool = (event as CustomEvent<string>).detail;
+    hint.textContent = activeTool === 'select-area' ? 'Click canvas to create an editable area' : 'Click canvas to add a placeholder layer';
+  });
+
+  window.addEventListener(areaClearRequestEvent, () => {
+    areaBox?.remove();
+    areaBox = null;
+    window.dispatchEvent(new CustomEvent(areaClearedEvent));
   });
 
   window.addEventListener('creatorx-layer-duplicate', (event) => {
@@ -55,6 +83,7 @@ export function createCanvasArea(): HTMLElement {
 
   window.addEventListener('creatorx-layers-clear', () => {
     stage.replaceChildren();
+    areaBox = null;
     count = 0;
     window.dispatchEvent(new CustomEvent('creatorx-layers-cleared'));
   });
