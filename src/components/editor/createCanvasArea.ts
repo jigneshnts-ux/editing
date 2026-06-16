@@ -11,6 +11,7 @@ export function createCanvasArea(): HTMLElement {
     const layer = document.createElement('div');
     const name = `Layer ${count}`;
     layer.className = 'canvas-layer';
+    layer.dataset.layer = name;
     layer.textContent = name;
     stage.append(layer);
     window.dispatchEvent(new CustomEvent('creatorx-layer-added', { detail: name }));
