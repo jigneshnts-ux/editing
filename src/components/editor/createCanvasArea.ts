@@ -6,7 +6,13 @@ export function createCanvasArea(): HTMLElement {
   el.className = 'editor-canvas';
   hint.textContent = 'Click canvas to add a placeholder layer';
   stage.className = 'canvas-stage';
-  stage.addEventListener('click', () => {
+  stage.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+    const existing = target.closest('.canvas-layer') as HTMLElement | null;
+    if (existing?.dataset.layer) {
+      window.dispatchEvent(new CustomEvent('creatorx-layer-selected', { detail: existing.dataset.layer }));
+      return;
+    }
     count += 1;
     const layer = document.createElement('div');
     const name = `Layer ${count}`;
