@@ -37,7 +37,7 @@ export function createCanvasArea(): HTMLElement {
 
   window.addEventListener('creatorx-layer-duplicate', (event) => {
     const name = (event as CustomEvent<string>).detail;
-    if (name) addLayer(`${name} copy`);
+    if (name) addLayer(`${name} copy ${count + 1}`);
   });
 
   window.addEventListener('creatorx-layer-delete', (event) => {
