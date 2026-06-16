@@ -64,6 +64,13 @@ export function createRightPanel(): HTMLElement {
     render();
   });
 
+  window.addEventListener('creatorx-layer-updated', (event) => {
+    const detail = (event as CustomEvent<{ oldName: string; name: string }>).detail;
+    names = names.map((item) => (item === detail.oldName ? detail.name : item));
+    selectedName = detail.name;
+    render();
+  });
+
   window.addEventListener('creatorx-layer-removed', (event) => {
     const name = (event as CustomEvent<string>).detail;
     names = names.filter((item) => item !== name);
