@@ -1,0 +1,14 @@
+.cx button {
+  margin: 8px;
+  padding: 12px 18px;
+  border: 1px solid white;
+  border-radius: 14px;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+}
+
+.cx button:hover {
+  background: white;
+  color: black;
+}
