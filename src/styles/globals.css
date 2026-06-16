@@ -11,19 +11,16 @@ body {
   background: radial-gradient(circle at top, #172033, #080b12 55%);
 }
 
-.creatorx-root {
+.cx {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  text-align: center;
+  padding: 48px;
+  box-sizing: border-box;
 }
 
-.creatorx-root h1 {
-  margin: 0;
+.cx h1 {
+  margin: 0 0 12px;
   font-size: clamp(2.4rem, 6vw, 5rem);
 }
 
-.creatorx-root p {
+.cx p {
   color: #94a3b8;
-  font-size: 1.1rem;
-}
