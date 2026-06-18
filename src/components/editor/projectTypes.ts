@@ -4,4 +4,5 @@ export type SavedProject = {
   version: number;
   items: string[];
   areaNote: string;
+  preset?: string;
 };
