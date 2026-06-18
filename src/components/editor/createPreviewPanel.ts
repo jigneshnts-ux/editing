@@ -2,23 +2,35 @@ import { getPreviewText } from './previewHelpers';
 import { requestCanvasSnapshot } from './previewRequest';
 import type { PreviewSnapshot } from './previewTypes';
 
-function downloadPreviewImage(text: string): void {
+function getImageSize(snapshot?: PreviewSnapshot): { width: number; height: number } {
+  const match = snapshot?.preset?.match(/(\d+)\s*x\s*(\d+)/i);
+  if (!match) return { width: 1080, height: 1080 };
+  return { width: Number(match[1]), height: Number(match[2]) };
+}
+
+function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot): void {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  canvas.width = 1080;
-  canvas.height = 1080;
+  const size = getImageSize(snapshot);
+  canvas.width = size.width;
+  canvas.height = size.height;
+
+  const pad = Math.max(48, Math.round(Math.min(size.width, size.height) * 0.06));
+  const titleSize = Math.max(34, Math.round(size.width * 0.045));
+  const bodySize = Math.max(24, Math.round(size.width * 0.028));
+
   ctx.fillStyle = '#0f172a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#f8fafc';
-  ctx.font = '48px Arial';
-  ctx.fillText('CreatorX Preview', 80, 140);
-  ctx.font = '32px Arial';
-  ctx.fillText(text, 80, 230, 920);
+  ctx.font = `${titleSize}px Arial`;
+  ctx.fillText('CreatorX Preview', pad, pad + titleSize);
+  ctx.font = `${bodySize}px Arial`;
+  ctx.fillText(text, pad, pad + titleSize + bodySize + 32, size.width - pad * 2);
   ctx.strokeStyle = '#64748b';
-  ctx.lineWidth = 6;
-  ctx.strokeRect(60, 60, 960, 960);
+  ctx.lineWidth = Math.max(4, Math.round(size.width * 0.006));
+  ctx.strokeRect(pad / 2, pad / 2, size.width - pad, size.height - pad);
 
   const link = document.createElement('a');
   link.href = canvas.toDataURL('image/png');
@@ -34,6 +46,7 @@ export function createPreviewPanel(): HTMLElement {
   const imageButton = document.createElement('button');
   const box = document.createElement('div');
   let latestPreview = '';
+  let latestSnapshot: PreviewSnapshot | undefined;
 
   panel.className = 'preview-panel';
   panel.style.display = 'flex';
@@ -57,7 +70,8 @@ export function createPreviewPanel(): HTMLElement {
 
   button.addEventListener('click', () => {
     requestCanvasSnapshot((snapshot) => {
-      latestPreview = getPreviewText(snapshot as PreviewSnapshot);
+      latestSnapshot = snapshot as PreviewSnapshot;
+      latestPreview = getPreviewText(latestSnapshot);
       box.textContent = latestPreview;
       saveButton.disabled = false;
       imageButton.disabled = false;
@@ -77,7 +91,7 @@ export function createPreviewPanel(): HTMLElement {
 
   imageButton.addEventListener('click', () => {
     if (!latestPreview) return;
-    downloadPreviewImage(latestPreview);
+    downloadPreviewImage(latestPreview, latestSnapshot);
   });
 
   panel.append(title, button, saveButton, imageButton, box);
