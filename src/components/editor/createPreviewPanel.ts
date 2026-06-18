@@ -161,7 +161,37 @@ function getExportMime(format: ExportFormat): string {
   return format === 'jpeg' ? 'image/jpeg' : 'image/png';
 }
 
-function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot, quality: ExportQuality = 'standard', format: ExportFormat = 'png'): void {
+function styleButton(button: HTMLButtonElement, primary = false): void {
+  button.style.border = primary ? '1px solid #e2e8f0' : '1px solid #475569';
+  button.style.borderRadius = '10px';
+  button.style.padding = '9px 10px';
+  button.style.background = primary ? '#f8fafc' : '#111827';
+  button.style.color = primary ? '#020617' : '#e2e8f0';
+  button.style.cursor = 'pointer';
+}
+
+function styleSelect(select: HTMLSelectElement): void {
+  select.style.border = '1px solid #475569';
+  select.style.borderRadius = '9px';
+  select.style.padding = '8px';
+  select.style.background = '#020617';
+  select.style.color = '#f8fafc';
+}
+
+function styleLabel(label: HTMLLabelElement): void {
+  label.style.display = 'flex';
+  label.style.flexDirection = 'column';
+  label.style.gap = '5px';
+  label.style.fontSize = '12px';
+  label.style.color = '#94a3b8';
+}
+
+function getExportLabel(quality: ExportQuality, format: ExportFormat): string {
+  const qualityLabel = quality === 'high' ? 'High 2x' : quality === 'compact' ? 'Compact 0.5x' : 'Standard 1x';
+  return `${qualityLabel} • ${format.toUpperCase()}`;
+}
+
+function downloadPreviewImage(snapshot: PreviewSnapshot | undefined, quality: ExportQuality = 'standard', format: ExportFormat = 'png'): void {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -198,6 +228,9 @@ function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot, quality:
 export function createPreviewPanel(): HTMLElement {
   const panel = document.createElement('section');
   const title = document.createElement('h3');
+  const previewGroup = document.createElement('div');
+  const exportGroup = document.createElement('div');
+  const controls = document.createElement('div');
   const button = document.createElement('button');
   const saveButton = document.createElement('button');
   const imageButton = document.createElement('button');
@@ -206,38 +239,60 @@ export function createPreviewPanel(): HTMLElement {
   const formatLabel = document.createElement('label');
   const formatSelect = document.createElement('select');
   const box = document.createElement('div');
+  const status = document.createElement('small');
   let latestPreview = '';
   let latestSnapshot: PreviewSnapshot | undefined;
 
   panel.className = 'preview-panel';
   panel.style.display = 'flex';
   panel.style.flexDirection = 'column';
-  panel.style.gap = '8px';
-  title.textContent = 'Preview';
+  panel.style.gap = '10px';
+  title.textContent = 'Preview & Export';
+  title.style.margin = '0';
+
+  previewGroup.style.display = 'flex';
+  previewGroup.style.flexDirection = 'column';
+  previewGroup.style.gap = '8px';
+  exportGroup.style.display = 'flex';
+  exportGroup.style.flexDirection = 'column';
+  exportGroup.style.gap = '8px';
+  exportGroup.style.paddingTop = '8px';
+  exportGroup.style.borderTop = '1px solid #334155';
+  controls.style.display = 'grid';
+  controls.style.gridTemplateColumns = '1fr 1fr';
+  controls.style.gap = '8px';
+
   button.type = 'button';
   button.textContent = 'Generate Preview';
   saveButton.type = 'button';
-  saveButton.textContent = 'Export Preview File';
+  saveButton.textContent = 'Export Text File';
   saveButton.disabled = true;
   imageButton.type = 'button';
-  imageButton.textContent = 'Export Preview Image';
+  imageButton.textContent = 'Export Image';
   imageButton.disabled = true;
-  qualityLabel.textContent = 'Export Quality';
-  qualityLabel.style.display = 'flex';
-  qualityLabel.style.flexDirection = 'column';
-  qualityLabel.style.gap = '4px';
+  styleButton(button, true);
+  styleButton(saveButton);
+  styleButton(imageButton);
+
+  qualityLabel.textContent = 'Quality';
+  styleLabel(qualityLabel);
   qualitySelect.innerHTML = '<option value="compact">Compact 0.5x</option><option value="standard" selected>Standard 1x</option><option value="high">High 2x</option>';
-  formatLabel.textContent = 'Export Format';
-  formatLabel.style.display = 'flex';
-  formatLabel.style.flexDirection = 'column';
-  formatLabel.style.gap = '4px';
+  styleSelect(qualitySelect);
+  formatLabel.textContent = 'Format';
+  styleLabel(formatLabel);
   formatSelect.innerHTML = '<option value="png" selected>PNG</option><option value="jpeg">JPEG</option>';
+  styleSelect(formatSelect);
+
   box.className = 'preview-box';
-  box.style.border = '1px dashed gray';
+  box.style.border = '1px dashed #475569';
   box.style.borderRadius = '10px';
   box.style.padding = '10px';
   box.style.whiteSpace = 'pre-line';
+  box.style.background = '#020617';
+  box.style.color = '#e2e8f0';
   box.textContent = 'No preview yet';
+  status.textContent = 'Generate a preview before exporting.';
+  status.style.color = '#94a3b8';
 
   button.addEventListener('click', () => {
     requestCanvasSnapshot((snapshot) => {
@@ -246,6 +301,7 @@ export function createPreviewPanel(): HTMLElement {
       box.textContent = latestPreview;
       saveButton.disabled = false;
       imageButton.disabled = false;
+      status.textContent = `Ready: ${getExportLabel(qualitySelect.value as ExportQuality, formatSelect.value as ExportFormat)}`;
     });
   });
 
@@ -258,15 +314,30 @@ export function createPreviewPanel(): HTMLElement {
     link.download = 'creatorx-preview.txt';
     link.click();
     URL.revokeObjectURL(url);
+    status.textContent = 'Text export created.';
   });
 
   imageButton.addEventListener('click', () => {
     if (!latestPreview) return;
-    downloadPreviewImage(latestPreview, latestSnapshot, qualitySelect.value as ExportQuality, formatSelect.value as ExportFormat);
+    const quality = qualitySelect.value as ExportQuality;
+    const format = formatSelect.value as ExportFormat;
+    downloadPreviewImage(latestSnapshot, quality, format);
+    status.textContent = `Image export created: ${getExportLabel(quality, format)}`;
+  });
+
+  qualitySelect.addEventListener('change', () => {
+    status.textContent = latestPreview ? `Ready: ${getExportLabel(qualitySelect.value as ExportQuality, formatSelect.value as ExportFormat)}` : 'Generate a preview before exporting.';
+  });
+
+  formatSelect.addEventListener('change', () => {
+    status.textContent = latestPreview ? `Ready: ${getExportLabel(qualitySelect.value as ExportQuality, formatSelect.value as ExportFormat)}` : 'Generate a preview before exporting.';
   });
 
   qualityLabel.append(qualitySelect);
   formatLabel.append(formatSelect);
-  panel.append(title, button, saveButton, imageButton, qualityLabel, formatLabel, box);
+  controls.append(qualityLabel, formatLabel);
+  previewGroup.append(button, box);
+  exportGroup.append(controls, saveButton, imageButton, status);
+  panel.append(title, previewGroup, exportGroup);
   return panel;
 }
