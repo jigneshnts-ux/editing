@@ -1,4 +1,4 @@
-import { historyRecordedEvent, requestUndo, undoAppliedEvent } from './historyEvents';
+import { historyRecordedEvent, redoAppliedEvent, requestRedo, requestUndo, undoAppliedEvent } from './historyEvents';
 
 export function createHistoryPanel(): HTMLElement {
   const panel = document.createElement('section');
@@ -11,6 +11,10 @@ export function createHistoryPanel(): HTMLElement {
   undo.textContent = 'Undo';
   undo.disabled = true;
 
+  const redo = document.createElement('button');
+  redo.textContent = 'Redo';
+  redo.disabled = true;
+
   const list = document.createElement('div');
   list.className = 'history-list';
   list.textContent = 'No actions yet';
@@ -19,11 +23,19 @@ export function createHistoryPanel(): HTMLElement {
     const entry = (event as CustomEvent<{ label: string }>).detail;
     list.textContent = entry?.label || 'Action recorded';
     undo.disabled = false;
+    redo.disabled = true;
   });
 
   window.addEventListener(undoAppliedEvent, () => {
     list.textContent = 'Undo applied';
     undo.disabled = true;
+    redo.disabled = false;
+  });
+
+  window.addEventListener(redoAppliedEvent, () => {
+    list.textContent = 'Redo applied';
+    undo.disabled = false;
+    redo.disabled = true;
   });
 
   undo.addEventListener('click', () => {
@@ -32,6 +44,12 @@ export function createHistoryPanel(): HTMLElement {
     undo.disabled = true;
   });
 
-  panel.append(title, undo, list);
+  redo.addEventListener('click', () => {
+    requestRedo();
+    list.textContent = 'Redo requested';
+    redo.disabled = true;
+  });
+
+  panel.append(title, undo, redo, list);
   return panel;
 }
