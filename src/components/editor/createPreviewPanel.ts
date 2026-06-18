@@ -4,6 +4,7 @@ import type { PreviewSnapshot } from './previewTypes';
 
 type PreviewSize = { width: number; height: number };
 type PreviewLayer = { name: string; width: number; height: number };
+type Box = { x: number; y: number; width: number; height: number };
 
 function getImageSize(snapshot?: PreviewSnapshot): PreviewSize {
   const match = snapshot?.preset?.match(/(\d+)\s*x\s*(\d+)/i);
@@ -22,69 +23,133 @@ function getLayer(item: string, index: number): PreviewLayer {
   };
 }
 
-function drawCard(ctx: CanvasRenderingContext2D, layer: PreviewLayer, x: number, y: number, width: number, height: number, textSize: number): void {
-  ctx.fillStyle = '#1e293b';
-  ctx.fillRect(x, y, width, height);
-  ctx.strokeStyle = '#94a3b8';
-  ctx.lineWidth = Math.max(2, Math.round(width * 0.01));
-  ctx.strokeRect(x, y, width, height);
-  ctx.fillStyle = '#f8fafc';
-  ctx.font = `${textSize}px Arial`;
-  ctx.fillText(layer.name, x + textSize, y + textSize * 1.7, width - textSize * 2);
-  ctx.fillStyle = '#cbd5e1';
-  ctx.font = `${Math.max(18, Math.round(textSize * 0.72))}px Arial`;
-  ctx.fillText(`${layer.width} x ${layer.height}`, x + textSize, y + textSize * 3, width - textSize * 2);
+function getLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let line = '';
+
+  words.forEach((word) => {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+      return;
+    }
+    line = next;
+  });
+
+  if (line) lines.push(line);
+  return lines.slice(0, 4);
 }
 
-function drawLayers(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, size: PreviewSize, pad: number, startY: number): void {
-  const layers = (snapshot?.items || []).map(getLayer);
-  const maxCards = Math.min(layers.length, 6);
-  const gap = Math.max(16, Math.round(size.width * 0.018));
-  const columns = size.width > size.height ? 3 : 2;
-  const cardWidth = Math.floor((size.width - pad * 2 - gap * (columns - 1)) / columns);
-  const cardHeight = Math.max(96, Math.round(cardWidth * 0.58));
-  const textSize = Math.max(22, Math.round(size.width * 0.024));
+function fillLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, size: number, color = '#e2e8f0'): number {
+  ctx.fillStyle = color;
+  ctx.font = `${size}px Arial`;
+  const lines = getLines(ctx, text, maxWidth);
+  lines.forEach((line, index) => ctx.fillText(line, x, y + index * size * 1.25, maxWidth));
+  return lines.length * size * 1.25;
+}
 
-  if (!maxCards) {
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = `${textSize}px Arial`;
-    ctx.fillText('No layers yet', pad, startY + textSize);
+function drawHeader(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, size: PreviewSize, pad: number): number {
+  const titleSize = Math.max(34, Math.round(size.width * 0.042));
+  const metaSize = Math.max(20, Math.round(size.width * 0.02));
+  const preset = snapshot?.preset || 'Custom canvas';
+
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, size.width, size.height);
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = `${titleSize}px Arial`;
+  ctx.fillText('CreatorX Studio Export', pad, pad + titleSize);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = `${metaSize}px Arial`;
+  ctx.fillText(preset, pad, pad + titleSize + metaSize * 1.5, size.width - pad * 2);
+
+  return pad + titleSize + metaSize * 2.4;
+}
+
+function drawArtboard(ctx: CanvasRenderingContext2D, box: Box): void {
+  ctx.fillStyle = '#020617';
+  ctx.fillRect(box.x, box.y, box.width, box.height);
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = Math.max(3, Math.round(box.width * 0.004));
+  ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.16)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 4; i += 1) {
+    const x = box.x + (box.width / 4) * i;
+    const y = box.y + (box.height / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(x, box.y);
+    ctx.lineTo(x, box.y + box.height);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(box.x, y);
+    ctx.lineTo(box.x + box.width, y);
+    ctx.stroke();
+  }
+}
+
+function drawLayerCard(ctx: CanvasRenderingContext2D, layer: PreviewLayer, box: Box, index: number, total: number): void {
+  const scale = Math.min(box.width / 520, box.height / 360);
+  const cardWidth = Math.max(120, Math.min(box.width * 0.72, layer.width * scale * 2.1));
+  const cardHeight = Math.max(82, Math.min(box.height * 0.45, layer.height * scale * 2.1));
+  const offset = Math.min(box.width * 0.12, index * box.width * 0.045);
+  const x = box.x + box.width * 0.12 + offset;
+  const y = box.y + box.height * 0.16 + index * Math.min(cardHeight * 0.38, box.height / Math.max(total + 2, 4));
+  const fontSize = Math.max(18, Math.round(box.width * 0.025));
+
+  ctx.fillStyle = index % 2 === 0 ? '#1e293b' : '#111827';
+  ctx.fillRect(x, y, cardWidth, cardHeight);
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = Math.max(2, Math.round(cardWidth * 0.01));
+  ctx.strokeRect(x, y, cardWidth, cardHeight);
+  fillLabel(ctx, layer.name, x + fontSize, y + fontSize * 1.8, cardWidth - fontSize * 2, fontSize, '#f8fafc');
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = `${Math.max(14, Math.round(fontSize * 0.7))}px Arial`;
+  ctx.fillText(`${layer.width} x ${layer.height}`, x + fontSize, y + cardHeight - fontSize, cardWidth - fontSize * 2);
+}
+
+function drawLayerLayout(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, artboard: Box): void {
+  const layers = (snapshot?.items || []).map(getLayer).slice(0, 7);
+  if (!layers.length) {
+    const size = Math.max(22, Math.round(artboard.width * 0.035));
+    fillLabel(ctx, 'No canvas layers yet', artboard.x + artboard.width * 0.1, artboard.y + artboard.height * 0.45, artboard.width * 0.8, size, '#cbd5e1');
     return;
   }
 
-  layers.slice(0, maxCards).forEach((layer, index) => {
-    const column = index % columns;
-    const row = Math.floor(index / columns);
-    const x = pad + column * (cardWidth + gap);
-    const y = startY + row * (cardHeight + gap);
-    drawCard(ctx, layer, x, y, cardWidth, cardHeight, textSize);
-  });
+  layers.forEach((layer, index) => drawLayerCard(ctx, layer, artboard, index, layers.length));
 }
 
-function drawAreaMarker(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, size: PreviewSize, pad: number): void {
+function drawAreaMarker(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, artboard: Box): void {
   if (!snapshot?.areaNote) return;
 
-  const markerWidth = Math.round(size.width * 0.34);
-  const markerHeight = Math.round(size.height * 0.16);
-  const x = size.width - markerWidth - pad;
-  const y = size.height - markerHeight - pad;
-  const labelSize = Math.max(20, Math.round(size.width * 0.022));
+  const markerWidth = Math.round(artboard.width * 0.38);
+  const markerHeight = Math.round(artboard.height * 0.18);
+  const x = artboard.x + artboard.width - markerWidth - artboard.width * 0.08;
+  const y = artboard.y + artboard.height - markerHeight - artboard.height * 0.08;
+  const labelSize = Math.max(16, Math.round(artboard.width * 0.024));
 
   ctx.save();
-  ctx.setLineDash([Math.max(12, Math.round(size.width * 0.012)), Math.max(8, Math.round(size.width * 0.008))]);
-  ctx.lineWidth = Math.max(3, Math.round(size.width * 0.004));
+  ctx.setLineDash([Math.max(10, Math.round(artboard.width * 0.012)), Math.max(6, Math.round(artboard.width * 0.007))]);
+  ctx.lineWidth = Math.max(2, Math.round(artboard.width * 0.004));
   ctx.strokeStyle = '#38bdf8';
   ctx.strokeRect(x, y, markerWidth, markerHeight);
   ctx.setLineDash([]);
   ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
   ctx.fillRect(x, y, markerWidth, markerHeight);
-  ctx.fillStyle = '#e0f2fe';
-  ctx.font = `${labelSize}px Arial`;
-  ctx.fillText('Selected area', x + labelSize, y + labelSize * 1.7, markerWidth - labelSize * 2);
-  ctx.fillStyle = '#bae6fd';
-  ctx.font = `${Math.max(16, Math.round(labelSize * 0.74))}px Arial`;
-  ctx.fillText(snapshot.areaNote, x + labelSize, y + labelSize * 3, markerWidth - labelSize * 2);
+  fillLabel(ctx, 'Selected area', x + labelSize, y + labelSize * 1.7, markerWidth - labelSize * 2, labelSize, '#e0f2fe');
+  fillLabel(ctx, snapshot.areaNote, x + labelSize, y + labelSize * 3.2, markerWidth - labelSize * 2, Math.max(13, Math.round(labelSize * 0.72)), '#bae6fd');
   ctx.restore();
+}
+
+function drawFooter(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, size: PreviewSize, pad: number, y: number): void {
+  const textSize = Math.max(18, Math.round(size.width * 0.018));
+  const layers = snapshot?.items?.length || 0;
+  const area = snapshot?.areaNote ? 'Area selected' : 'No area selected';
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = `${textSize}px Arial`;
+  ctx.fillText(`Layers: ${layers}   |   ${area}`, pad, y, size.width - pad * 2);
 }
 
 function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot): void {
@@ -96,21 +161,23 @@ function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot): void {
   canvas.width = size.width;
   canvas.height = size.height;
 
-  const pad = Math.max(48, Math.round(Math.min(size.width, size.height) * 0.06));
-  const titleSize = Math.max(34, Math.round(size.width * 0.045));
-  const bodySize = Math.max(24, Math.round(size.width * 0.026));
+  const pad = Math.max(42, Math.round(Math.min(size.width, size.height) * 0.055));
+  const headerBottom = drawHeader(ctx, snapshot, size, pad);
+  const footerHeight = Math.max(58, Math.round(size.height * 0.055));
+  const artboard: Box = {
+    x: pad,
+    y: headerBottom,
+    width: size.width - pad * 2,
+    height: size.height - headerBottom - footerHeight - pad
+  };
 
-  ctx.fillStyle = '#0f172a';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#f8fafc';
-  ctx.font = `${titleSize}px Arial`;
-  ctx.fillText('CreatorX Preview', pad, pad + titleSize);
-  ctx.font = `${bodySize}px Arial`;
-  ctx.fillText(text, pad, pad + titleSize + bodySize + 28, size.width - pad * 2);
-  drawLayers(ctx, snapshot, size, pad, pad + titleSize + bodySize * 3.2);
-  drawAreaMarker(ctx, snapshot, size, pad);
+  drawArtboard(ctx, artboard);
+  drawLayerLayout(ctx, snapshot, artboard);
+  drawAreaMarker(ctx, snapshot, artboard);
+  drawFooter(ctx, snapshot, size, pad, size.height - pad * 0.8);
+
   ctx.strokeStyle = '#64748b';
-  ctx.lineWidth = Math.max(4, Math.round(size.width * 0.006));
+  ctx.lineWidth = Math.max(4, Math.round(size.width * 0.005));
   ctx.strokeRect(pad / 2, pad / 2, size.width - pad, size.height - pad);
 
   const link = document.createElement('a');
