@@ -61,6 +61,32 @@ function drawLayers(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | u
   });
 }
 
+function drawAreaMarker(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, size: PreviewSize, pad: number): void {
+  if (!snapshot?.areaNote) return;
+
+  const markerWidth = Math.round(size.width * 0.34);
+  const markerHeight = Math.round(size.height * 0.16);
+  const x = size.width - markerWidth - pad;
+  const y = size.height - markerHeight - pad;
+  const labelSize = Math.max(20, Math.round(size.width * 0.022));
+
+  ctx.save();
+  ctx.setLineDash([Math.max(12, Math.round(size.width * 0.012)), Math.max(8, Math.round(size.width * 0.008))]);
+  ctx.lineWidth = Math.max(3, Math.round(size.width * 0.004));
+  ctx.strokeStyle = '#38bdf8';
+  ctx.strokeRect(x, y, markerWidth, markerHeight);
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+  ctx.fillRect(x, y, markerWidth, markerHeight);
+  ctx.fillStyle = '#e0f2fe';
+  ctx.font = `${labelSize}px Arial`;
+  ctx.fillText('Selected area', x + labelSize, y + labelSize * 1.7, markerWidth - labelSize * 2);
+  ctx.fillStyle = '#bae6fd';
+  ctx.font = `${Math.max(16, Math.round(labelSize * 0.74))}px Arial`;
+  ctx.fillText(snapshot.areaNote, x + labelSize, y + labelSize * 3, markerWidth - labelSize * 2);
+  ctx.restore();
+}
+
 function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot): void {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -82,6 +108,7 @@ function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot): void {
   ctx.font = `${bodySize}px Arial`;
   ctx.fillText(text, pad, pad + titleSize + bodySize + 28, size.width - pad * 2);
   drawLayers(ctx, snapshot, size, pad, pad + titleSize + bodySize * 3.2);
+  drawAreaMarker(ctx, snapshot, size, pad);
   ctx.strokeStyle = '#64748b';
   ctx.lineWidth = Math.max(4, Math.round(size.width * 0.006));
   ctx.strokeRect(pad / 2, pad / 2, size.width - pad, size.height - pad);
