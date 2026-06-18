@@ -1,5 +1,5 @@
 import { areaActionRequestEvent, areaClearRequestEvent, areaClearedEvent, areaUpdatedEvent } from './areaEvents';
-import { recordHistory } from './historyEvents';
+import { recordHistory, undoAppliedEvent, undoRequestedEvent } from './historyEvents';
 
 export function createCanvasArea(): HTMLElement {
   const el = document.createElement('section');
@@ -8,6 +8,7 @@ export function createCanvasArea(): HTMLElement {
   let count = 0;
   let activeTool = 'move';
   let areaBox: HTMLElement | null = null;
+  let undoLast: (() => void) | null = null;
 
   function selectLayer(layer: HTMLElement): void {
     stage.querySelectorAll('.canvas-layer').forEach((item) => item.classList.remove('is-selected'));
@@ -26,6 +27,11 @@ export function createCanvasArea(): HTMLElement {
     areaBox.className = 'area-box';
     areaBox.textContent = 'Selected area';
     stage.append(areaBox);
+    undoLast = () => {
+      areaBox?.remove();
+      areaBox = null;
+      window.dispatchEvent(new CustomEvent(areaClearedEvent));
+    };
     recordHistory('Area selected');
     window.dispatchEvent(new CustomEvent(areaUpdatedEvent, { detail: 'Area selected' }));
   }
@@ -35,6 +41,10 @@ export function createCanvasArea(): HTMLElement {
     areaBox.classList.remove('area-blur', 'area-erase', 'area-highlight', 'area-darken');
     areaBox.classList.add(`area-${action}`);
     areaBox.textContent = action === 'erase' ? 'Area erased' : `Area ${action}`;
+    undoLast = () => {
+      areaBox?.classList.remove('area-blur', 'area-erase', 'area-highlight', 'area-darken');
+      if (areaBox) areaBox.textContent = 'Selected area';
+    };
     recordHistory(`Area ${action}`);
     window.dispatchEvent(new CustomEvent(areaUpdatedEvent, { detail: `Area action: ${action}` }));
   }
@@ -47,6 +57,10 @@ export function createCanvasArea(): HTMLElement {
     layer.textContent = name;
     resizeLayer(layer);
     stage.append(layer);
+    undoLast = () => {
+      layer.remove();
+      window.dispatchEvent(new CustomEvent('creatorx-layer-removed', { detail: name }));
+    };
     recordHistory(`Layer added: ${name}`);
     window.dispatchEvent(new CustomEvent('creatorx-layer-added', { detail: name }));
     selectLayer(layer);
@@ -118,6 +132,12 @@ export function createCanvasArea(): HTMLElement {
     selectLayer(layer);
     recordHistory(`Layer updated: ${detail.name}`);
     window.dispatchEvent(new CustomEvent('creatorx-layer-updated', { detail: { oldName, name: detail.name } }));
+  });
+
+  window.addEventListener(undoRequestedEvent, () => {
+    undoLast?.();
+    undoLast = null;
+    window.dispatchEvent(new CustomEvent(undoAppliedEvent));
   });
 
   el.append(hint, stage);
