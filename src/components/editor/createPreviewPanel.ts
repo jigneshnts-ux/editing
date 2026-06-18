@@ -6,6 +6,7 @@ type PreviewSize = { width: number; height: number };
 type PreviewLayer = { name: string; width: number; height: number };
 type Box = { x: number; y: number; width: number; height: number };
 type ExportQuality = 'compact' | 'standard' | 'high';
+type ExportFormat = 'png' | 'jpeg';
 
 function getImageSize(snapshot?: PreviewSnapshot, quality: ExportQuality = 'standard'): PreviewSize {
   const match = snapshot?.preset?.match(/(\d+)\s*x\s*(\d+)/i);
@@ -53,7 +54,7 @@ function fillLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: nu
   return lines.length * size * 1.25;
 }
 
-function drawHeader(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, size: PreviewSize, pad: number, quality: ExportQuality): number {
+function drawHeader(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, size: PreviewSize, pad: number, quality: ExportQuality, format: ExportFormat): number {
   const titleSize = Math.max(34, Math.round(size.width * 0.042));
   const metaSize = Math.max(20, Math.round(size.width * 0.02));
   const preset = snapshot?.preset || 'Custom canvas';
@@ -66,7 +67,7 @@ function drawHeader(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | u
   ctx.fillText('CreatorX Studio Export', pad, pad + titleSize);
   ctx.fillStyle = '#94a3b8';
   ctx.font = `${metaSize}px Arial`;
-  ctx.fillText(`${preset} • ${qualityLabel}`, pad, pad + titleSize + metaSize * 1.5, size.width - pad * 2);
+  ctx.fillText(`${preset} • ${qualityLabel} • ${format.toUpperCase()}`, pad, pad + titleSize + metaSize * 1.5, size.width - pad * 2);
 
   return pad + titleSize + metaSize * 2.4;
 }
@@ -156,7 +157,11 @@ function drawFooter(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | u
   ctx.fillText(`Layers: ${layers}   |   ${area}`, pad, y, size.width - pad * 2);
 }
 
-function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot, quality: ExportQuality = 'standard'): void {
+function getExportMime(format: ExportFormat): string {
+  return format === 'jpeg' ? 'image/jpeg' : 'image/png';
+}
+
+function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot, quality: ExportQuality = 'standard', format: ExportFormat = 'png'): void {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -166,7 +171,7 @@ function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot, quality:
   canvas.height = size.height;
 
   const pad = Math.max(42, Math.round(Math.min(size.width, size.height) * 0.055));
-  const headerBottom = drawHeader(ctx, snapshot, size, pad, quality);
+  const headerBottom = drawHeader(ctx, snapshot, size, pad, quality, format);
   const footerHeight = Math.max(58, Math.round(size.height * 0.055));
   const artboard: Box = {
     x: pad,
@@ -185,8 +190,8 @@ function downloadPreviewImage(text: string, snapshot?: PreviewSnapshot, quality:
   ctx.strokeRect(pad / 2, pad / 2, size.width - pad, size.height - pad);
 
   const link = document.createElement('a');
-  link.href = canvas.toDataURL('image/png');
-  link.download = `creatorx-preview-${quality}.png`;
+  link.href = canvas.toDataURL(getExportMime(format), 0.92);
+  link.download = `creatorx-preview-${quality}.${format === 'jpeg' ? 'jpg' : 'png'}`;
   link.click();
 }
 
@@ -198,6 +203,8 @@ export function createPreviewPanel(): HTMLElement {
   const imageButton = document.createElement('button');
   const qualityLabel = document.createElement('label');
   const qualitySelect = document.createElement('select');
+  const formatLabel = document.createElement('label');
+  const formatSelect = document.createElement('select');
   const box = document.createElement('div');
   let latestPreview = '';
   let latestSnapshot: PreviewSnapshot | undefined;
@@ -220,6 +227,11 @@ export function createPreviewPanel(): HTMLElement {
   qualityLabel.style.flexDirection = 'column';
   qualityLabel.style.gap = '4px';
   qualitySelect.innerHTML = '<option value="compact">Compact 0.5x</option><option value="standard" selected>Standard 1x</option><option value="high">High 2x</option>';
+  formatLabel.textContent = 'Export Format';
+  formatLabel.style.display = 'flex';
+  formatLabel.style.flexDirection = 'column';
+  formatLabel.style.gap = '4px';
+  formatSelect.innerHTML = '<option value="png" selected>PNG</option><option value="jpeg">JPEG</option>';
   box.className = 'preview-box';
   box.style.border = '1px dashed gray';
   box.style.borderRadius = '10px';
@@ -250,10 +262,11 @@ export function createPreviewPanel(): HTMLElement {
 
   imageButton.addEventListener('click', () => {
     if (!latestPreview) return;
-    downloadPreviewImage(latestPreview, latestSnapshot, qualitySelect.value as ExportQuality);
+    downloadPreviewImage(latestPreview, latestSnapshot, qualitySelect.value as ExportQuality, formatSelect.value as ExportFormat);
   });
 
   qualityLabel.append(qualitySelect);
-  panel.append(title, button, saveButton, imageButton, qualityLabel, box);
+  formatLabel.append(formatSelect);
+  panel.append(title, button, saveButton, imageButton, qualityLabel, formatLabel, box);
   return panel;
 }
