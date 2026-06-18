@@ -7,6 +7,11 @@ type HistoryStep = {
   redo: () => void;
 };
 
+type ProjectSnapshot = {
+  items: string[];
+  areaNote: string;
+};
+
 export function createCanvasArea(): HTMLElement {
   const el = document.createElement('section');
   const hint = document.createElement('p');
@@ -32,6 +37,19 @@ export function createCanvasArea(): HTMLElement {
   function resizeLayer(layer: HTMLElement, width = 120, height = 80): void {
     layer.style.width = `${width}px`;
     layer.style.height = `${height}px`;
+  }
+
+  function getProjectSnapshot(): ProjectSnapshot {
+    const items = [...stage.querySelectorAll<HTMLElement>('.canvas-layer')].map((layer) => {
+      const name = layer.dataset.layer || layer.textContent || 'Layer';
+      const width = layer.style.width || '120px';
+      const height = layer.style.height || '80px';
+      return `${name} | ${width} x ${height}`;
+    });
+    return {
+      items,
+      areaNote: areaBox ? areaBox.textContent || 'Area selected' : 'No area selected'
+    };
   }
 
   function restoreArea(box: HTMLElement): void {
@@ -131,6 +149,11 @@ export function createCanvasArea(): HTMLElement {
   window.addEventListener('creatorx-tool-change', (event) => {
     activeTool = (event as CustomEvent<string>).detail;
     hint.textContent = activeTool === 'select-area' ? 'Click canvas to create an editable area' : 'Click canvas to add a placeholder layer';
+  });
+
+  window.addEventListener('creatorx-project-snapshot-request', (event) => {
+    const reply = (event as CustomEvent<(snapshot: ProjectSnapshot) => void>).detail;
+    if (typeof reply === 'function') reply(getProjectSnapshot());
   });
 
   window.addEventListener(areaActionRequestEvent, (event) => {
