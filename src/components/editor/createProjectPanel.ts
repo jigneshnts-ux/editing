@@ -50,6 +50,7 @@ export function createProjectPanel(): HTMLElement {
       return;
     }
     const data = JSON.parse(raw) as SavedProject;
+    window.dispatchEvent(new CustomEvent('creatorx-project-load-requested', { detail: data }));
     status.textContent = `Loaded ${data.items?.length || 0} item(s), ${data.areaNote || data.savedAt}`;
   });
 
