@@ -9,8 +9,9 @@ export type HistoryEntry = {
   after?: string;
 };
 
-export function recordHistory(entry: HistoryEntry): void {
-  window.dispatchEvent(new CustomEvent(historyRecordedEvent, { detail: entry }));
+export function recordHistory(entry: HistoryEntry | string): void {
+  const detail = typeof entry === 'string' ? { label: entry } : entry;
+  window.dispatchEvent(new CustomEvent(historyRecordedEvent, { detail }));
 }
 
 export function requestUndo(): void {
