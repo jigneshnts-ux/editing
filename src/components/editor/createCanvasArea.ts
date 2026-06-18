@@ -11,12 +11,18 @@ type HistoryStep = {
 type ProjectSnapshot = {
   items: string[];
   areaNote: string;
+  preset?: string;
 };
 
 type RestoredLayer = {
   name: string;
   width: number;
   height: number;
+};
+
+type AppliedPreset = {
+  name: string;
+  size: string;
 };
 
 export function createCanvasArea(): HTMLElement {
@@ -28,11 +34,18 @@ export function createCanvasArea(): HTMLElement {
   let count = 0;
   let activeTool = 'move';
   let areaBox: HTMLElement | null = null;
+  let currentPreset = 'Custom canvas';
 
   function pushHistory(step: HistoryStep): void {
     undoStack.push(step);
     redoStack.length = 0;
     recordHistory(step.label);
+  }
+
+  function updateHint(): void {
+    hint.textContent = activeTool === 'select-area'
+      ? `Click canvas to create an editable area | ${currentPreset}`
+      : `Click canvas to add a placeholder layer | ${currentPreset}`;
   }
 
   function selectLayer(layer: HTMLElement): void {
@@ -67,6 +80,22 @@ export function createCanvasArea(): HTMLElement {
     };
   }
 
+  function applyPresetLabel(preset: string): void {
+    currentPreset = preset || 'Custom canvas';
+    stage.dataset.preset = currentPreset;
+    updateHint();
+  }
+
+  function applyPresetSize(preset: AppliedPreset): void {
+    const sizeParts = preset.size.split('x').map((part) => Number.parseInt(part, 10));
+    const width = Number.isFinite(sizeParts[0]) ? sizeParts[0] : 1080;
+    const height = Number.isFinite(sizeParts[1]) ? sizeParts[1] : 1350;
+    stage.style.aspectRatio = `${width} / ${height}`;
+    stage.style.minHeight = height > width ? '320px' : '220px';
+    applyPresetLabel(`${preset.name} - ${preset.size}`);
+    recordHistory(`Preset applied: ${preset.name}`);
+  }
+
   function getProjectSnapshot(): ProjectSnapshot {
     const items = [...stage.querySelectorAll<HTMLElement>('.canvas-layer')].map((layer) => {
       const name = layer.dataset.layer || layer.textContent || 'Layer';
@@ -76,7 +105,8 @@ export function createCanvasArea(): HTMLElement {
     });
     return {
       items,
-      areaNote: areaBox ? areaBox.textContent || 'Area selected' : 'No area selected'
+      areaNote: areaBox ? areaBox.textContent || 'Area selected' : 'No area selected',
+      preset: currentPreset
     };
   }
 
@@ -91,6 +121,7 @@ export function createCanvasArea(): HTMLElement {
     stage.replaceChildren();
     areaBox = null;
     count = 0;
+    applyPresetLabel(data.preset || 'Custom canvas');
     window.dispatchEvent(new CustomEvent('creatorx-layers-cleared'));
 
     (data.items || []).forEach((item, index) => {
@@ -181,8 +212,8 @@ export function createCanvasArea(): HTMLElement {
   }
 
   el.className = 'editor-canvas';
-  hint.textContent = 'Click canvas to add a placeholder layer';
   stage.className = 'canvas-stage';
+  updateHint();
 
   stage.addEventListener('click', (event) => {
     const target = event.target as HTMLElement;
@@ -200,7 +231,11 @@ export function createCanvasArea(): HTMLElement {
 
   window.addEventListener('creatorx-tool-change', (event) => {
     activeTool = (event as CustomEvent<string>).detail;
-    hint.textContent = activeTool === 'select-area' ? 'Click canvas to create an editable area' : 'Click canvas to add a placeholder layer';
+    updateHint();
+  });
+
+  window.addEventListener('creatorx-preset-applied', (event) => {
+    applyPresetSize((event as CustomEvent<AppliedPreset>).detail);
   });
 
   window.addEventListener('creatorx-project-snapshot-request', (event) => {
