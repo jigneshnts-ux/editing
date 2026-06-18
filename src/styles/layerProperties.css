@@ -53,6 +53,7 @@
   background: black;
 }
 
+.project-panel,
 .history-panel {
   display: flex;
   flex-direction: column;
@@ -62,6 +63,7 @@
   border-top: 1px solid gray;
 }
 
+.project-panel p,
 .history-list {
   font-size: 13px;
 }
