@@ -1,3 +1,7 @@
+import { getPreviewText } from './previewHelpers';
+import { requestCanvasSnapshot } from './previewRequest';
+import type { PreviewSnapshot } from './previewTypes';
+
 export function createPreviewPanel(): HTMLElement {
   const panel = document.createElement('section');
   const title = document.createElement('h3');
@@ -12,7 +16,9 @@ export function createPreviewPanel(): HTMLElement {
   box.textContent = 'No preview yet';
 
   button.addEventListener('click', () => {
-    box.textContent = 'Preview requested';
+    requestCanvasSnapshot((snapshot) => {
+      box.textContent = getPreviewText(snapshot as PreviewSnapshot);
+    });
   });
 
   panel.append(title, button, box);
