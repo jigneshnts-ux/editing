@@ -1,4 +1,5 @@
 import { areaActionRequestEvent, areaClearRequestEvent, areaClearedEvent, areaUpdatedEvent } from './areaEvents';
+import { recordHistory } from './historyEvents';
 
 export function createCanvasArea(): HTMLElement {
   const el = document.createElement('section');
@@ -25,6 +26,7 @@ export function createCanvasArea(): HTMLElement {
     areaBox.className = 'area-box';
     areaBox.textContent = 'Selected area';
     stage.append(areaBox);
+    recordHistory('Area selected');
     window.dispatchEvent(new CustomEvent(areaUpdatedEvent, { detail: 'Area selected' }));
   }
 
@@ -33,6 +35,7 @@ export function createCanvasArea(): HTMLElement {
     areaBox.classList.remove('area-blur', 'area-erase', 'area-highlight', 'area-darken');
     areaBox.classList.add(`area-${action}`);
     areaBox.textContent = action === 'erase' ? 'Area erased' : `Area ${action}`;
+    recordHistory(`Area ${action}`);
     window.dispatchEvent(new CustomEvent(areaUpdatedEvent, { detail: `Area action: ${action}` }));
   }
 
@@ -44,6 +47,7 @@ export function createCanvasArea(): HTMLElement {
     layer.textContent = name;
     resizeLayer(layer);
     stage.append(layer);
+    recordHistory(`Layer added: ${name}`);
     window.dispatchEvent(new CustomEvent('creatorx-layer-added', { detail: name }));
     selectLayer(layer);
   }
@@ -78,6 +82,7 @@ export function createCanvasArea(): HTMLElement {
   window.addEventListener(areaClearRequestEvent, () => {
     areaBox?.remove();
     areaBox = null;
+    recordHistory('Area cleared');
     window.dispatchEvent(new CustomEvent(areaClearedEvent));
   });
 
@@ -90,6 +95,7 @@ export function createCanvasArea(): HTMLElement {
     const name = (event as CustomEvent<string>).detail;
     const layer = [...stage.querySelectorAll<HTMLElement>('.canvas-layer')].find((item) => item.dataset.layer === name);
     layer?.remove();
+    recordHistory(`Layer deleted: ${name}`);
     window.dispatchEvent(new CustomEvent('creatorx-layer-removed', { detail: name }));
   });
 
@@ -97,6 +103,7 @@ export function createCanvasArea(): HTMLElement {
     stage.replaceChildren();
     areaBox = null;
     count = 0;
+    recordHistory('Canvas cleared');
     window.dispatchEvent(new CustomEvent('creatorx-layers-cleared'));
   });
 
@@ -109,6 +116,7 @@ export function createCanvasArea(): HTMLElement {
     layer.textContent = detail.name;
     resizeLayer(layer, detail.width, detail.height);
     selectLayer(layer);
+    recordHistory(`Layer updated: ${detail.name}`);
     window.dispatchEvent(new CustomEvent('creatorx-layer-updated', { detail: { oldName, name: detail.name } }));
   });
 
