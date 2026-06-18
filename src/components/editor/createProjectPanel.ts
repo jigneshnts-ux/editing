@@ -3,6 +3,7 @@ import type { SavedProject } from './projectTypes';
 type CanvasSnapshot = {
   items: string[];
   areaNote: string;
+  preset?: string;
 };
 
 export function createProjectPanel(): HTMLElement {
@@ -16,7 +17,7 @@ export function createProjectPanel(): HTMLElement {
   const key = 'creatorx-studio-project';
 
   function readCanvasSnapshot(): CanvasSnapshot {
-    let snapshot: CanvasSnapshot = { items: [], areaNote: 'No area selected' };
+    let snapshot: CanvasSnapshot = { items: [], areaNote: 'No area selected', preset: 'Custom canvas' };
     window.dispatchEvent(new CustomEvent('creatorx-project-snapshot-request', {
       detail: (next: CanvasSnapshot) => {
         snapshot = next;
@@ -33,14 +34,15 @@ export function createProjectPanel(): HTMLElement {
       savedAt,
       version: 2,
       items: snapshot.items,
-      areaNote: snapshot.areaNote
+      areaNote: snapshot.areaNote,
+      preset: snapshot.preset
     };
   }
 
   function loadProject(data: SavedProject): void {
     window.localStorage.setItem(key, JSON.stringify(data));
     window.dispatchEvent(new CustomEvent('creatorx-project-load-requested', { detail: data }));
-    status.textContent = `Loaded ${data.items?.length || 0} item(s), ${data.areaNote || data.savedAt}`;
+    status.textContent = `Loaded ${data.items?.length || 0} item(s), ${data.preset || data.areaNote || data.savedAt}`;
   }
 
   panel.className = 'project-panel';
@@ -55,7 +57,7 @@ export function createProjectPanel(): HTMLElement {
   save.addEventListener('click', () => {
     const data = createSavedProject();
     window.localStorage.setItem(key, JSON.stringify(data));
-    status.textContent = `Saved ${data.items.length} item(s), ${data.areaNote}`;
+    status.textContent = `Saved ${data.items.length} item(s), ${data.preset || data.areaNote}`;
   });
 
   open.addEventListener('click', () => {
@@ -75,7 +77,7 @@ export function createProjectPanel(): HTMLElement {
     link.download = 'creatorx-project.json';
     link.click();
     URL.revokeObjectURL(link.href);
-    status.textContent = `Exported ${data.items.length} item(s)`;
+    status.textContent = `Exported ${data.items.length} item(s), ${data.preset || 'Custom canvas'}`;
   });
 
   importFile.addEventListener('change', () => {
