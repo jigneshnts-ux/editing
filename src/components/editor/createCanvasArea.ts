@@ -1,5 +1,6 @@
 import { areaActionRequestEvent, areaClearRequestEvent, areaClearedEvent, areaUpdatedEvent } from './areaEvents';
 import { recordHistory, redoAppliedEvent, redoRequestedEvent, undoAppliedEvent, undoRequestedEvent } from './historyEvents';
+import type { SavedProject } from './projectTypes';
 
 type HistoryStep = {
   label: string;
@@ -10,6 +11,12 @@ type HistoryStep = {
 type ProjectSnapshot = {
   items: string[];
   areaNote: string;
+};
+
+type RestoredLayer = {
+  name: string;
+  width: number;
+  height: number;
 };
 
 export function createCanvasArea(): HTMLElement {
@@ -39,6 +46,27 @@ export function createCanvasArea(): HTMLElement {
     layer.style.height = `${height}px`;
   }
 
+  function createLayerElement(name: string, width = 120, height = 80): HTMLElement {
+    const layer = document.createElement('div');
+    layer.className = 'canvas-layer';
+    layer.dataset.layer = name;
+    layer.textContent = name;
+    resizeLayer(layer, width, height);
+    return layer;
+  }
+
+  function parseSavedLayer(item: string, index: number): RestoredLayer {
+    const parts = item.split('|').map((part) => part.trim());
+    const name = parts[0] || `Layer ${index + 1}`;
+    const size = parts[1] || '';
+    const sizeParts = size.split('x').map((part) => Number.parseInt(part, 10));
+    return {
+      name,
+      width: Number.isFinite(sizeParts[0]) ? sizeParts[0] : 120,
+      height: Number.isFinite(sizeParts[1]) ? sizeParts[1] : 80
+    };
+  }
+
   function getProjectSnapshot(): ProjectSnapshot {
     const items = [...stage.querySelectorAll<HTMLElement>('.canvas-layer')].map((layer) => {
       const name = layer.dataset.layer || layer.textContent || 'Layer';
@@ -57,6 +85,34 @@ export function createCanvasArea(): HTMLElement {
     areaBox = box;
     stage.append(box);
     window.dispatchEvent(new CustomEvent(areaUpdatedEvent, { detail: box.textContent || 'Area selected' }));
+  }
+
+  function restoreSavedProject(data: SavedProject): void {
+    stage.replaceChildren();
+    areaBox = null;
+    count = 0;
+    window.dispatchEvent(new CustomEvent('creatorx-layers-cleared'));
+
+    (data.items || []).forEach((item, index) => {
+      const parsed = parseSavedLayer(item, index);
+      const layer = createLayerElement(parsed.name, parsed.width, parsed.height);
+      stage.append(layer);
+      count += 1;
+      window.dispatchEvent(new CustomEvent('creatorx-layer-added', { detail: parsed.name }));
+    });
+
+    const areaNote = data.areaNote || 'No area selected';
+    if (areaNote !== 'No area selected') {
+      areaBox = document.createElement('div');
+      areaBox.className = 'area-box';
+      areaBox.textContent = areaNote;
+      stage.append(areaBox);
+      window.dispatchEvent(new CustomEvent(areaUpdatedEvent, { detail: areaNote }));
+    } else {
+      window.dispatchEvent(new CustomEvent(areaClearedEvent));
+    }
+
+    recordHistory(`Project loaded: ${data.items?.length || 0} item(s)`);
   }
 
   function createArea(): void {
@@ -106,11 +162,7 @@ export function createCanvasArea(): HTMLElement {
 
   function addLayer(name = `Layer ${count + 1}`): void {
     count += 1;
-    const layer = document.createElement('div');
-    layer.className = 'canvas-layer';
-    layer.dataset.layer = name;
-    layer.textContent = name;
-    resizeLayer(layer);
+    const layer = createLayerElement(name);
     stage.append(layer);
     pushHistory({
       label: `Layer added: ${name}`,
@@ -154,6 +206,10 @@ export function createCanvasArea(): HTMLElement {
   window.addEventListener('creatorx-project-snapshot-request', (event) => {
     const reply = (event as CustomEvent<(snapshot: ProjectSnapshot) => void>).detail;
     if (typeof reply === 'function') reply(getProjectSnapshot());
+  });
+
+  window.addEventListener('creatorx-project-load-requested', (event) => {
+    restoreSavedProject((event as CustomEvent<SavedProject>).detail);
   });
 
   window.addEventListener(areaActionRequestEvent, (event) => {
