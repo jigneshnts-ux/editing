@@ -349,7 +349,8 @@ export function createCanvasArea(): HTMLElement {
   function duplicateLayer(source: HTMLElement): void {
     const name = source.dataset.layer || source.textContent || `Layer ${count + 1}`;
     addLayer(`${name} copy ${count + 1}`, toNumber(source.style.width, 120), toNumber(source.style.height, 80), source.dataset.imageSrc);
-    const copy = [...stage.querySelectorAll<HTMLElement>('.canvas-layer')].at(-1);
+    const layers = [...stage.querySelectorAll<HTMLElement>('.canvas-layer')];
+    const copy = layers[layers.length - 1];
     if (!copy) return;
     copy.dataset.opacity = source.dataset.opacity || '100';
     copy.dataset.rotation = source.dataset.rotation || '0';
