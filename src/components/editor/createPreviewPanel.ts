@@ -3,7 +3,7 @@ import { requestCanvasSnapshot } from './previewRequest';
 import type { PreviewSnapshot } from './previewTypes';
 
 type PreviewSize = { width: number; height: number };
-type PreviewLayer = { name: string; width: number; height: number };
+type PreviewLayer = { name: string; width: number; height: number; imageSrc?: string };
 type Box = { x: number; y: number; width: number; height: number };
 type ExportQuality = 'compact' | 'standard' | 'high';
 type ExportFormat = 'png' | 'jpeg';
@@ -16,15 +16,53 @@ function getImageSize(snapshot?: PreviewSnapshot, quality: ExportQuality = 'stan
   return base;
 }
 
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function hasSelectedArea(snapshot?: PreviewSnapshot): boolean {
+  return Boolean(snapshot?.areaNote && snapshot.areaNote !== 'No area selected');
+}
+
 function getLayer(item: string, index: number): PreviewLayer {
   const parts = item.split('|').map((part) => part.trim());
   const size = parts[1] || '';
   const match = size.match(/(\d+)\D+(\d+)/);
+  const imagePart = parts.find((part) => part.startsWith('image='));
+  const encodedImage = imagePart ? imagePart.replace('image=', '') : '';
   return {
     name: parts[0] || `Layer ${index + 1}`,
     width: match ? Number(match[1]) : 120,
-    height: match ? Number(match[2]) : 80
+    height: match ? Number(match[2]) : 80,
+    imageSrc: encodedImage ? safeDecode(encodedImage) : undefined
   };
+}
+
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
+function drawImageCover(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number): void {
+  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  const drawX = x + (width - drawWidth) / 2;
+  const drawY = y + (height - drawHeight) / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, width, height);
+  ctx.clip();
+  ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+  ctx.restore();
 }
 
 function getLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
@@ -95,7 +133,7 @@ function drawArtboard(ctx: CanvasRenderingContext2D, box: Box): void {
   }
 }
 
-function drawLayerCard(ctx: CanvasRenderingContext2D, layer: PreviewLayer, box: Box, index: number, total: number): void {
+async function drawLayerCard(ctx: CanvasRenderingContext2D, layer: PreviewLayer, box: Box, index: number, total: number): Promise<void> {
   const scale = Math.min(box.width / 520, box.height / 360);
   const cardWidth = Math.max(120, Math.min(box.width * 0.72, layer.width * scale * 2.1));
   const cardHeight = Math.max(82, Math.min(box.height * 0.45, layer.height * scale * 2.1));
@@ -104,18 +142,31 @@ function drawLayerCard(ctx: CanvasRenderingContext2D, layer: PreviewLayer, box: 
   const y = box.y + box.height * 0.16 + index * Math.min(cardHeight * 0.38, box.height / Math.max(total + 2, 4));
   const fontSize = Math.max(18, Math.round(box.width * 0.025));
 
-  ctx.fillStyle = index % 2 === 0 ? '#1e293b' : '#111827';
-  ctx.fillRect(x, y, cardWidth, cardHeight);
-  ctx.strokeStyle = '#cbd5e1';
+  if (layer.imageSrc) {
+    const image = await loadImage(layer.imageSrc);
+    if (image) {
+      drawImageCover(ctx, image, x, y, cardWidth, cardHeight);
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.35)';
+      ctx.fillRect(x, y, cardWidth, cardHeight);
+    } else {
+      ctx.fillStyle = '#312e81';
+      ctx.fillRect(x, y, cardWidth, cardHeight);
+    }
+  } else {
+    ctx.fillStyle = index % 2 === 0 ? '#1e293b' : '#111827';
+    ctx.fillRect(x, y, cardWidth, cardHeight);
+  }
+
+  ctx.strokeStyle = layer.imageSrc ? '#38bdf8' : '#cbd5e1';
   ctx.lineWidth = Math.max(2, Math.round(cardWidth * 0.01));
   ctx.strokeRect(x, y, cardWidth, cardHeight);
   fillLabel(ctx, layer.name, x + fontSize, y + fontSize * 1.8, cardWidth - fontSize * 2, fontSize, '#f8fafc');
-  ctx.fillStyle = '#94a3b8';
+  ctx.fillStyle = '#cbd5e1';
   ctx.font = `${Math.max(14, Math.round(fontSize * 0.7))}px Arial`;
-  ctx.fillText(`${layer.width} x ${layer.height}`, x + fontSize, y + cardHeight - fontSize, cardWidth - fontSize * 2);
+  ctx.fillText(`${layer.width} x ${layer.height}${layer.imageSrc ? ' • image' : ''}`, x + fontSize, y + cardHeight - fontSize, cardWidth - fontSize * 2);
 }
 
-function drawLayerLayout(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, artboard: Box): void {
+async function drawLayerLayout(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, artboard: Box): Promise<void> {
   const layers = (snapshot?.items || []).map(getLayer).slice(0, 7);
   if (!layers.length) {
     const size = Math.max(22, Math.round(artboard.width * 0.035));
@@ -123,11 +174,13 @@ function drawLayerLayout(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapsho
     return;
   }
 
-  layers.forEach((layer, index) => drawLayerCard(ctx, layer, artboard, index, layers.length));
+  for (const [index, layer] of layers.entries()) {
+    await drawLayerCard(ctx, layer, artboard, index, layers.length);
+  }
 }
 
 function drawAreaMarker(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, artboard: Box): void {
-  if (!snapshot?.areaNote) return;
+  if (!hasSelectedArea(snapshot)) return;
 
   const markerWidth = Math.round(artboard.width * 0.38);
   const markerHeight = Math.round(artboard.height * 0.18);
@@ -144,17 +197,18 @@ function drawAreaMarker(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot
   ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
   ctx.fillRect(x, y, markerWidth, markerHeight);
   fillLabel(ctx, 'Selected area', x + labelSize, y + labelSize * 1.7, markerWidth - labelSize * 2, labelSize, '#e0f2fe');
-  fillLabel(ctx, snapshot.areaNote, x + labelSize, y + labelSize * 3.2, markerWidth - labelSize * 2, Math.max(13, Math.round(labelSize * 0.72)), '#bae6fd');
+  fillLabel(ctx, snapshot?.areaNote || 'Selected area', x + labelSize, y + labelSize * 3.2, markerWidth - labelSize * 2, Math.max(13, Math.round(labelSize * 0.72)), '#bae6fd');
   ctx.restore();
 }
 
 function drawFooter(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, size: PreviewSize, pad: number, y: number): void {
   const textSize = Math.max(18, Math.round(size.width * 0.018));
   const layers = snapshot?.items?.length || 0;
-  const area = snapshot?.areaNote ? 'Area selected' : 'No area selected';
+  const imageLayers = (snapshot?.items || []).filter((item) => item.includes('image=')).length;
+  const area = hasSelectedArea(snapshot) ? 'Area selected' : 'No area selected';
   ctx.fillStyle = '#94a3b8';
   ctx.font = `${textSize}px Arial`;
-  ctx.fillText(`Layers: ${layers}   |   ${area}`, pad, y, size.width - pad * 2);
+  ctx.fillText(`Layers: ${layers}   |   Images: ${imageLayers}   |   ${area}`, pad, y, size.width - pad * 2);
 }
 
 function getExportMime(format: ExportFormat): string {
@@ -191,7 +245,7 @@ function getExportLabel(quality: ExportQuality, format: ExportFormat): string {
   return `${qualityLabel} • ${format.toUpperCase()}`;
 }
 
-function downloadPreviewImage(snapshot: PreviewSnapshot | undefined, quality: ExportQuality = 'standard', format: ExportFormat = 'png'): void {
+async function downloadPreviewImage(snapshot: PreviewSnapshot | undefined, quality: ExportQuality = 'standard', format: ExportFormat = 'png'): Promise<void> {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -211,7 +265,7 @@ function downloadPreviewImage(snapshot: PreviewSnapshot | undefined, quality: Ex
   };
 
   drawArtboard(ctx, artboard);
-  drawLayerLayout(ctx, snapshot, artboard);
+  await drawLayerLayout(ctx, snapshot, artboard);
   drawAreaMarker(ctx, snapshot, artboard);
   drawFooter(ctx, snapshot, size, pad, size.height - pad * 0.8);
 
@@ -317,11 +371,14 @@ export function createPreviewPanel(): HTMLElement {
     status.textContent = 'Text export created.';
   });
 
-  imageButton.addEventListener('click', () => {
+  imageButton.addEventListener('click', async () => {
     if (!latestPreview) return;
     const quality = qualitySelect.value as ExportQuality;
     const format = formatSelect.value as ExportFormat;
-    downloadPreviewImage(latestSnapshot, quality, format);
+    imageButton.disabled = true;
+    status.textContent = 'Preparing image export...';
+    await downloadPreviewImage(latestSnapshot, quality, format);
+    imageButton.disabled = false;
     status.textContent = `Image export created: ${getExportLabel(quality, format)}`;
   });
 
