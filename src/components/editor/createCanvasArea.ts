@@ -18,6 +18,7 @@ type RestoredLayer = {
   name: string;
   width: number;
   height: number;
+  imageSrc?: string;
 };
 
 type AppliedPreset = {
@@ -28,6 +29,9 @@ type AppliedPreset = {
 export function createCanvasArea(): HTMLElement {
   const el = document.createElement('section');
   const hint = document.createElement('p');
+  const controls = document.createElement('div');
+  const importButton = document.createElement('button');
+  const imageInput = document.createElement('input');
   const stage = document.createElement('div');
   const undoStack: HistoryStep[] = [];
   const redoStack: HistoryStep[] = [];
@@ -59,12 +63,28 @@ export function createCanvasArea(): HTMLElement {
     layer.style.height = `${height}px`;
   }
 
-  function createLayerElement(name: string, width = 120, height = 80): HTMLElement {
+  function applyImageStyle(layer: HTMLElement, imageSrc: string): void {
+    layer.dataset.imageSrc = imageSrc;
+    layer.dataset.imageLayer = 'true';
+    layer.style.backgroundImage = `linear-gradient(rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.18)), url(${imageSrc})`;
+    layer.style.backgroundSize = 'cover';
+    layer.style.backgroundPosition = 'center';
+    layer.style.backgroundRepeat = 'no-repeat';
+    layer.style.color = '#ffffff';
+    layer.style.textShadow = '0 1px 5px rgba(0, 0, 0, 0.8)';
+    layer.style.alignItems = 'flex-end';
+    layer.style.justifyContent = 'flex-start';
+    layer.style.padding = '8px';
+    layer.style.boxSizing = 'border-box';
+  }
+
+  function createLayerElement(name: string, width = 120, height = 80, imageSrc?: string): HTMLElement {
     const layer = document.createElement('div');
     layer.className = 'canvas-layer';
     layer.dataset.layer = name;
     layer.textContent = name;
     resizeLayer(layer, width, height);
+    if (imageSrc) applyImageStyle(layer, imageSrc);
     return layer;
   }
 
@@ -73,10 +93,13 @@ export function createCanvasArea(): HTMLElement {
     const name = parts[0] || `Layer ${index + 1}`;
     const size = parts[1] || '';
     const sizeParts = size.split('x').map((part) => Number.parseInt(part, 10));
+    const imagePart = parts.find((part) => part.startsWith('image='));
+    const encodedImage = imagePart ? imagePart.replace('image=', '') : '';
     return {
       name,
       width: Number.isFinite(sizeParts[0]) ? sizeParts[0] : 120,
-      height: Number.isFinite(sizeParts[1]) ? sizeParts[1] : 80
+      height: Number.isFinite(sizeParts[1]) ? sizeParts[1] : 80,
+      imageSrc: encodedImage ? decodeURIComponent(encodedImage) : undefined
     };
   }
 
@@ -101,7 +124,9 @@ export function createCanvasArea(): HTMLElement {
       const name = layer.dataset.layer || layer.textContent || 'Layer';
       const width = layer.style.width || '120px';
       const height = layer.style.height || '80px';
-      return `${name} | ${width} x ${height}`;
+      const imageSrc = layer.dataset.imageSrc;
+      const imagePart = imageSrc ? ` | image=${encodeURIComponent(imageSrc)}` : '';
+      return `${name} | ${width} x ${height}${imagePart}`;
     });
     return {
       items,
@@ -126,7 +151,7 @@ export function createCanvasArea(): HTMLElement {
 
     (data.items || []).forEach((item, index) => {
       const parsed = parseSavedLayer(item, index);
-      const layer = createLayerElement(parsed.name, parsed.width, parsed.height);
+      const layer = createLayerElement(parsed.name, parsed.width, parsed.height, parsed.imageSrc);
       stage.append(layer);
       count += 1;
       window.dispatchEvent(new CustomEvent('creatorx-layer-added', { detail: parsed.name }));
@@ -191,9 +216,9 @@ export function createCanvasArea(): HTMLElement {
     window.dispatchEvent(new CustomEvent(areaUpdatedEvent, { detail: `Area action: ${action}` }));
   }
 
-  function addLayer(name = `Layer ${count + 1}`): void {
+  function addLayer(name = `Layer ${count + 1}`, width = 120, height = 80, imageSrc?: string): void {
     count += 1;
-    const layer = createLayerElement(name);
+    const layer = createLayerElement(name, width, height, imageSrc);
     stage.append(layer);
     pushHistory({
       label: `Layer added: ${name}`,
@@ -211,9 +236,56 @@ export function createCanvasArea(): HTMLElement {
     selectLayer(layer);
   }
 
+  function addImportedImage(file: File): void {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      const imageSrc = String(reader.result || '');
+      if (!imageSrc) return;
+      const image = new Image();
+      image.addEventListener('load', () => {
+        const maxWidth = 280;
+        const maxHeight = 190;
+        const scale = Math.min(maxWidth / image.naturalWidth, maxHeight / image.naturalHeight, 1);
+        const width = Math.max(120, Math.round(image.naturalWidth * scale));
+        const height = Math.max(90, Math.round(image.naturalHeight * scale));
+        addLayer(file.name.replace(/\.[^/.]+$/, '') || `Image ${count + 1}`, width, height, imageSrc);
+        recordHistory(`Image imported: ${file.name}`);
+      });
+      image.addEventListener('error', () => {
+        addLayer(file.name.replace(/\.[^/.]+$/, '') || `Image ${count + 1}`, 220, 140, imageSrc);
+        recordHistory(`Image imported: ${file.name}`);
+      });
+      image.src = imageSrc;
+    });
+    reader.readAsDataURL(file);
+  }
+
   el.className = 'editor-canvas';
   stage.className = 'canvas-stage';
+  controls.style.display = 'flex';
+  controls.style.justifyContent = 'flex-end';
+  controls.style.margin = '4px 0 10px';
+  importButton.type = 'button';
+  importButton.textContent = 'Import Image';
+  importButton.style.border = '1px solid rgba(148, 163, 184, 0.45)';
+  importButton.style.borderRadius = '10px';
+  importButton.style.background = '#111827';
+  importButton.style.color = '#f8fafc';
+  importButton.style.padding = '8px 12px';
+  importButton.style.cursor = 'pointer';
+  imageInput.type = 'file';
+  imageInput.accept = 'image/png,image/jpeg,image/webp';
+  imageInput.style.display = 'none';
+  controls.append(importButton, imageInput);
   updateHint();
+
+  importButton.addEventListener('click', () => imageInput.click());
+
+  imageInput.addEventListener('change', () => {
+    const file = imageInput.files?.[0];
+    if (file) addImportedImage(file);
+    imageInput.value = '';
+  });
 
   stage.addEventListener('click', (event) => {
     const target = event.target as HTMLElement;
@@ -357,6 +429,6 @@ export function createCanvasArea(): HTMLElement {
     window.dispatchEvent(new CustomEvent(redoAppliedEvent));
   });
 
-  el.append(hint, stage);
+  el.append(hint, controls, stage);
   return el;
 }
