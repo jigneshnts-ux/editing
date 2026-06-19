@@ -3,7 +3,18 @@ import { requestCanvasSnapshot } from './previewRequest';
 import type { PreviewSnapshot } from './previewTypes';
 
 type PreviewSize = { width: number; height: number };
-type PreviewLayer = { name: string; width: number; height: number; imageSrc?: string };
+type PreviewLayer = {
+  name: string;
+  width: number;
+  height: number;
+  imageSrc?: string;
+  opacity: number;
+  rotation: number;
+  flipX: boolean;
+  flipY: boolean;
+  fit: string;
+  filter: string;
+};
 type Box = { x: number; y: number; width: number; height: number };
 type ExportQuality = 'compact' | 'standard' | 'high';
 type ExportFormat = 'png' | 'jpeg';
@@ -28,17 +39,26 @@ function hasSelectedArea(snapshot?: PreviewSnapshot): boolean {
   return Boolean(snapshot?.areaNote && snapshot.areaNote !== 'No area selected');
 }
 
+function getPart(parts: string[], key: string): string {
+  return parts.find((part) => part.startsWith(`${key}=`))?.replace(`${key}=`, '') || '';
+}
+
 function getLayer(item: string, index: number): PreviewLayer {
   const parts = item.split('|').map((part) => part.trim());
   const size = parts[1] || '';
   const match = size.match(/(\d+)\D+(\d+)/);
-  const imagePart = parts.find((part) => part.startsWith('image='));
-  const encodedImage = imagePart ? imagePart.replace('image=', '') : '';
+  const encodedImage = getPart(parts, 'image');
   return {
     name: parts[0] || `Layer ${index + 1}`,
     width: match ? Number(match[1]) : 120,
     height: match ? Number(match[2]) : 80,
-    imageSrc: encodedImage ? safeDecode(encodedImage) : undefined
+    imageSrc: encodedImage ? safeDecode(encodedImage) : undefined,
+    opacity: Number(getPart(parts, 'opacity')) || 100,
+    rotation: Number(getPart(parts, 'rotation')) || 0,
+    flipX: getPart(parts, 'flipX') === 'true',
+    flipY: getPart(parts, 'flipY') === 'true',
+    fit: getPart(parts, 'fit') || 'cover',
+    filter: getPart(parts, 'filter') || 'none'
   };
 }
 
@@ -51,8 +71,19 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-function drawImageCover(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number): void {
-  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+function getFilterCss(filter: string): string {
+  if (filter === 'warm') return 'sepia(0.35) saturate(1.25) brightness(1.05)';
+  if (filter === 'cool') return 'saturate(1.1) hue-rotate(12deg) brightness(1.02)';
+  if (filter === 'bw') return 'grayscale(1) contrast(1.12)';
+  if (filter === 'cinematic') return 'contrast(1.18) saturate(0.9) brightness(0.92)';
+  if (filter === 'sharp') return 'contrast(1.22) saturate(1.12)';
+  return 'none';
+}
+
+function drawImageFit(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number, fit: string): void {
+  const scale = fit === 'contain'
+    ? Math.min(width / image.naturalWidth, height / image.naturalHeight)
+    : Math.max(width / image.naturalWidth, height / image.naturalHeight);
   const drawWidth = image.naturalWidth * scale;
   const drawHeight = image.naturalHeight * scale;
   const drawX = x + (width - drawWidth) / 2;
@@ -141,11 +172,21 @@ async function drawLayerCard(ctx: CanvasRenderingContext2D, layer: PreviewLayer,
   const x = box.x + box.width * 0.12 + offset;
   const y = box.y + box.height * 0.16 + index * Math.min(cardHeight * 0.38, box.height / Math.max(total + 2, 4));
   const fontSize = Math.max(18, Math.round(box.width * 0.025));
+  const centerX = x + cardWidth / 2;
+  const centerY = y + cardHeight / 2;
+
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, Math.max(0.1, layer.opacity / 100));
+  ctx.translate(centerX, centerY);
+  ctx.rotate((layer.rotation * Math.PI) / 180);
+  ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
+  ctx.translate(-centerX, -centerY);
+  ctx.filter = getFilterCss(layer.filter);
 
   if (layer.imageSrc) {
     const image = await loadImage(layer.imageSrc);
     if (image) {
-      drawImageCover(ctx, image, x, y, cardWidth, cardHeight);
+      drawImageFit(ctx, image, x, y, cardWidth, cardHeight, layer.fit);
       ctx.fillStyle = 'rgba(2, 6, 23, 0.35)';
       ctx.fillRect(x, y, cardWidth, cardHeight);
     } else {
@@ -157,6 +198,7 @@ async function drawLayerCard(ctx: CanvasRenderingContext2D, layer: PreviewLayer,
     ctx.fillRect(x, y, cardWidth, cardHeight);
   }
 
+  ctx.filter = 'none';
   ctx.strokeStyle = layer.imageSrc ? '#38bdf8' : '#cbd5e1';
   ctx.lineWidth = Math.max(2, Math.round(cardWidth * 0.01));
   ctx.strokeRect(x, y, cardWidth, cardHeight);
@@ -164,6 +206,7 @@ async function drawLayerCard(ctx: CanvasRenderingContext2D, layer: PreviewLayer,
   ctx.fillStyle = '#cbd5e1';
   ctx.font = `${Math.max(14, Math.round(fontSize * 0.7))}px Arial`;
   ctx.fillText(`${layer.width} x ${layer.height}${layer.imageSrc ? ' • image' : ''}`, x + fontSize, y + cardHeight - fontSize, cardWidth - fontSize * 2);
+  ctx.restore();
 }
 
 async function drawLayerLayout(ctx: CanvasRenderingContext2D, snapshot: PreviewSnapshot | undefined, artboard: Box): Promise<void> {
